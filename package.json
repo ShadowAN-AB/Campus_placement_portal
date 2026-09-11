@@ -1,0 +1,26 @@
+{
+  "name": "placecell",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PlaceCell — campus placement portal for students, recruiters, and placement cells",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run start:dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:api": "npm run start:dev --prefix server",
+    "dev:worker": "npm run start:worker --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix server && npm run build --prefix client",
+    "lint": "npm run lint --prefix server && npm run lint --prefix client",
+    "test": "npm test --prefix server && npm test --prefix client",
+    "seed": "npm run seed --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
