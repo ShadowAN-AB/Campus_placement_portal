@@ -14,11 +14,22 @@ type Fit = {
 };
 type FitRes = { items?: Fit[]; extractedData?: Extracted | null; source?: string };
 type Extracted = { skills?: string[]; education?: { degree?: string; school?: string }[]; projects?: { name?: string }[]; certifications?: string[] };
-type Version = { resumeId: string; version: number; topScore: number; avgScore: number; filename: string };
+type Version = { resumeId: string; version: number; topScore: number; avgScore: number; filename: string; uploadedAt?: string };
 type Chat = { _id: string; role: "user" | "assistant"; text: string };
+type ResumeStatus = { status: string; filename?: string; version?: number; error?: string };
+type Health = { healthy?: boolean; provider?: string; error?: string };
+
+const STATUS_LABEL: Record<string, string> = {
+  none: "No resume uploaded",
+  uploaded: "Queued for analysis",
+  parsing: "Parsing file…",
+  extracted: "Scoring roles…",
+  analyzed: "Analyzed",
+  failed: "Analysis failed",
+};
 
 export function ResumeIntelligence() {
-  const [status, setStatus] = useState<string>("none");
+  const [status, setStatus] = useState<ResumeStatus>({ status: "none" });
   const [source, setSource] = useState<string>("profile");
   const [jobs, setJobs] = useState<Fit[]>([]);
   const [companies, setCompanies] = useState<Fit[]>([]);
@@ -28,42 +39,82 @@ export function ResumeIntelligence() {
   const [question, setQuestion] = useState("");
   const [compare, setCompare] = useState("");
   const [asking, setAsking] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
+  const [health, setHealth] = useState<Health | null>(null);
+
+  const busy = ["uploaded", "parsing", "extracted"].includes(status.status);
 
   async function refresh() {
-    const [st, jobRes, companyRes, vers, history] = await Promise.all([
-      api<{ status: string }>("/v1/resumes/status"),
+    const [st, jobRes, companyRes, vers, history, ai] = await Promise.all([
+      api<ResumeStatus>("/v1/resumes/status"),
       api<Fit[] | FitRes>("/v1/fit/jobs"),
       api<Fit[] | FitRes>("/v1/fit/companies"),
       api<Version[]>("/v1/resumes/versions"),
       api<Chat[]>("/v1/ai/chat"),
+      api<Health>("/v1/ai/health").catch(() => ({ healthy: false })),
     ]);
     const jobPayload = Array.isArray(jobRes) ? { items: jobRes } : jobRes;
     const companyPayload = Array.isArray(companyRes) ? { items: companyRes } : companyRes;
-    setStatus(st.status);
+    setStatus(st);
     setJobs(jobPayload.items ?? []);
     setCompanies(companyPayload.items ?? []);
     setExtracted(jobPayload.extractedData ?? companyPayload.extractedData ?? null);
     setSource(jobPayload.source ?? companyPayload.source ?? "profile");
     setVersions(vers);
     setChat(history);
+    setHealth(ai);
   }
 
   useEffect(() => {
     refresh();
+  }, []);
+
+  useEffect(() => {
+    if (!busy) return;
     const t = setInterval(() => {
-      if (status === "uploaded" || status === "parsing" || status === "extracted") refresh();
-    }, 2500);
+      refresh().catch(() => undefined);
+    }, 2000);
     return () => clearInterval(t);
-  }, [status]);
+  }, [busy]);
 
   async function upload(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const file = new FormData(e.currentTarget).get("resume") as File;
+    setError("");
+    const input = e.currentTarget.elements.namedItem("resume") as HTMLInputElement;
+    const file = input?.files?.[0];
+    if (!file) {
+      setError("Choose a PDF or DOCX resume first.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File must be 10 MB or smaller.");
+      return;
+    }
     const fd = new FormData();
     fd.append("resume", file);
     const token = sessionStorage.getItem("placecell_access");
-    await fetch("/v1/resumes", { method: "POST", body: fd, headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "include" });
-    setStatus("uploaded");
+    setUploading(true);
+    try {
+      const res = await fetch("/v1/resumes", {
+        method: "POST",
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Upload failed");
+      }
+      setFileName(file.name);
+      setStatus({ status: "uploaded", filename: file.name });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   const readiness = useMemo(() => {
@@ -78,10 +129,36 @@ export function ResumeIntelligence() {
         title="Score every open role"
         subtitle={source === "resume" ? "Scores from your latest analyzed resume." : "Live profile match until a resume is analyzed."}
       />
-      <form onSubmit={upload} className="mb-6 flex gap-3 rounded-2xl border border-zinc-200 bg-white p-5">
-        <input type="file" name="resume" accept=".pdf,.docx" className="text-sm" />
-        <button className="btn-primary">Upload</button>
-        <span className="self-center text-sm text-zinc-500">Status: {status}</span>
+      <form onSubmit={upload} className="mb-6 space-y-3 rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            name="resume"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="text-sm"
+            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+          />
+          <button className="btn-primary" disabled={uploading || busy}>{uploading ? "Uploading…" : busy ? "Analyzing…" : "Upload"}</button>
+          <span className="text-sm text-zinc-600">
+            {STATUS_LABEL[status.status] ?? status.status}
+            {status.filename ? ` · ${status.filename}` : fileName ? ` · ${fileName}` : ""}
+            {status.version ? ` · v${status.version}` : ""}
+          </span>
+          <span className={`text-xs ${health?.healthy ? "text-emerald-700" : "text-zinc-500"}`}>
+            AI {health?.healthy ? "ready" : "fallback"}
+          </span>
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {status.status === "failed" && status.error && <p className="text-sm text-red-600">{status.error}</p>}
+        {versions.length > 0 && (
+          <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
+            {versions.map((v) => (
+              <span key={v.resumeId} className="rounded-full border border-zinc-200 px-2 py-1">
+                v{v.version} {v.filename} · top {Math.round(v.topScore)}%
+              </span>
+            ))}
+          </div>
+        )}
       </form>
 
       <div className="mb-6 grid gap-3 md:grid-cols-3">

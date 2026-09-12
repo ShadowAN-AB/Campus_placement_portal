@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { MatchScore, MatchScoreDocument } from "../applications/schemas/match-score.schema";
@@ -37,8 +37,8 @@ export class MatchingService {
 
   async upload(user: AuthUser, file: Express.Multer.File) {
     const allowed = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-    if (!allowed.includes(file.mimetype)) throw new Error("PDF or DOCX only");
-    if (file.size > 10 * 1024 * 1024) throw new Error("File too large");
+    if (!allowed.includes(file.mimetype)) throw new BadRequestException("PDF or DOCX only");
+    if (file.size > 10 * 1024 * 1024) throw new BadRequestException("File too large");
     const key = `${user.userId}/${Date.now()}-${file.originalname}`;
     await this.storage.put(key, file.buffer, file.mimetype);
     const doc = await this.uploads.create({

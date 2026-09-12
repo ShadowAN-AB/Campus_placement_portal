@@ -5,6 +5,7 @@ import { Job as BullJob } from "bullmq";
 import { Model } from "mongoose";
 import Redis from "ioredis";
 import { Inject } from "@nestjs/common";
+import { idMatch, oid } from "../../common/oid";
 import { EventTypes, QUEUE_EVENTS } from "../../common/types";
 import { Application } from "../../applications/schemas/application.schema";
 import { MatchScore } from "../../applications/schemas/match-score.schema";
@@ -136,7 +137,7 @@ export class EventsProcessor extends WorkerHost {
       await upload.save();
 
       const jobs = await this.jobs.find({ approved: true, status: "active" }).lean();
-      const profile = await this.profiles.findOne({ userId: upload.userId }).lean();
+      const profile = await this.profiles.findOne({ userId: idMatch(upload.userId) }).lean();
       const studentSkills = [...new Set([...(profile?.skills ?? []), ...extracted.skills])];
       const jobFitScores = jobs.map((job) => {
         const result = calculateEnhancedMatchScore({
@@ -167,9 +168,11 @@ export class EventsProcessor extends WorkerHost {
       }
 
       await this.analyses.findOneAndUpdate(
-        { userId: upload.userId, resumeId: upload._id },
+        { userId: oid(upload.userId), resumeId: upload._id },
         {
           $set: {
+            userId: oid(upload.userId),
+            resumeId: upload._id,
             extractedData: extracted,
             jobFitScores,
             companyFitScores: [...byCompany.values()],
@@ -178,7 +181,7 @@ export class EventsProcessor extends WorkerHost {
         { upsert: true },
       );
       await this.profiles.findOneAndUpdate(
-        { userId: upload.userId },
+        { userId: idMatch(upload.userId) },
         {
           $set: {
             education: extracted.education,
@@ -209,10 +212,10 @@ export class EventsProcessor extends WorkerHost {
   private async recomputeRanks(payload: Record<string, unknown>) {
     const jobs = await this.jobs.find({ approved: true, status: "active" }).lean();
     const students = payload.userId
-      ? await this.profiles.find({ userId: payload.userId }).lean()
+      ? await this.profiles.find({ userId: idMatch(String(payload.userId)) }).lean()
       : await this.profiles.find().lean();
     for (const profile of students) {
-      const key = `jobs:rank:${profile.userId}`;
+      const key = `jobs:rank:${String(profile.userId)}`;
       const pipe = this.redis.pipeline();
       pipe.del(key);
       for (const job of jobs) {
@@ -227,8 +230,8 @@ export class EventsProcessor extends WorkerHost {
         });
         pipe.zadd(key, result.score, String(job._id));
         await this.scores.findOneAndUpdate(
-          { studentId: profile.userId, jobId: job._id },
-          { $set: { score: result.score, matchedSkills: result.matchedSkills, missingSkills: result.missingSkills } },
+          { studentId: oid(profile.userId), jobId: job._id },
+          { $set: { studentId: oid(profile.userId), score: result.score, matchedSkills: result.matchedSkills, missingSkills: result.missingSkills } },
           { upsert: true },
         );
       }
