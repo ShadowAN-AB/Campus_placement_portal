@@ -64,6 +64,28 @@ export function Chip({ children, tone = "neutral" }: { children: ReactNode; tone
   return <span className={`inline-flex rounded border px-2 py-0.5 text-xs ${tones[tone]}`}>{children}</span>;
 }
 
+export function scoreTone(value: number) {
+  if (value >= 80) return "text-emerald-700";
+  if (value >= 55) return "text-zinc-900";
+  if (value >= 35) return "text-amber-700";
+  return "text-red-700";
+}
+
+export function FactorBar({ label, value }: { label: string; value: number }) {
+  const width = Math.max(2, Math.min(100, Number(value) || 0));
+  const bar =
+    width >= 80 ? "bg-emerald-600" : width >= 55 ? "bg-zinc-900" : width >= 35 ? "bg-amber-500" : "bg-red-500";
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-20 shrink-0 text-xs text-zinc-500">{label}</span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100">
+        <div className={`h-full rounded-full ${bar}`} style={{ width: `${width}%` }} />
+      </div>
+      <span className={`w-9 text-right text-xs tabular-nums ${scoreTone(width)}`}>{Math.round(width)}%</span>
+    </div>
+  );
+}
+
 export function countdown(date: string) {
   const diff = new Date(date).getTime() - Date.now();
   if (diff <= 0) return "Now";

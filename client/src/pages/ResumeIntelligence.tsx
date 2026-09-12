@@ -1,28 +1,49 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PageHead } from "../components/Shell";
+import { Chip, FactorBar, Section, scoreTone } from "../components/ui";
 import { api } from "../utils/api";
 
+type Factors = { skills?: number; experience?: number; salary?: number; education?: number; projects?: number };
+type Fit = {
+  title: string;
+  company: string;
+  score: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  factors?: Factors;
+};
+type FitRes = { items?: Fit[]; extractedData?: Extracted | null; source?: string };
+type Extracted = { skills?: string[]; education?: { degree?: string; school?: string }[]; projects?: { name?: string }[]; certifications?: string[] };
 type Version = { resumeId: string; version: number; topScore: number; avgScore: number; filename: string };
-type Fit = { title: string; company: string; score: number; matchedSkills: string[]; missingSkills: string[] };
 type Chat = { _id: string; role: "user" | "assistant"; text: string };
 
 export function ResumeIntelligence() {
   const [status, setStatus] = useState<string>("none");
-  const [fits, setFits] = useState<Fit[]>([]);
+  const [source, setSource] = useState<string>("profile");
+  const [jobs, setJobs] = useState<Fit[]>([]);
+  const [companies, setCompanies] = useState<Fit[]>([]);
+  const [extracted, setExtracted] = useState<Extracted | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
   const [chat, setChat] = useState<Chat[]>([]);
   const [question, setQuestion] = useState("");
-  const [compare, setCompare] = useState<string>("");
+  const [compare, setCompare] = useState("");
+  const [asking, setAsking] = useState(false);
 
   async function refresh() {
-    const [st, jobs, vers, history] = await Promise.all([
+    const [st, jobRes, companyRes, vers, history] = await Promise.all([
       api<{ status: string }>("/v1/resumes/status"),
-      api<Fit[]>("/v1/fit/jobs"),
+      api<Fit[] | FitRes>("/v1/fit/jobs"),
+      api<Fit[] | FitRes>("/v1/fit/companies"),
       api<Version[]>("/v1/resumes/versions"),
       api<Chat[]>("/v1/ai/chat"),
     ]);
+    const jobPayload = Array.isArray(jobRes) ? { items: jobRes } : jobRes;
+    const companyPayload = Array.isArray(companyRes) ? { items: companyRes } : companyRes;
     setStatus(st.status);
-    setFits(jobs);
+    setJobs(jobPayload.items ?? []);
+    setCompanies(companyPayload.items ?? []);
+    setExtracted(jobPayload.extractedData ?? companyPayload.extractedData ?? null);
+    setSource(jobPayload.source ?? companyPayload.source ?? "profile");
     setVersions(vers);
     setChat(history);
   }
@@ -45,31 +66,112 @@ export function ResumeIntelligence() {
     setStatus("uploaded");
   }
 
+  const readiness = useMemo(() => {
+    if (!jobs.length) return 0;
+    return Math.round(jobs.reduce((s, j) => s + (j.score || 0), 0) / jobs.length);
+  }, [jobs]);
+
   return (
     <div>
-      <PageHead eyebrow="Resume intelligence" title="Score every open role" subtitle="Upload returns 202. The worker parses, extracts, and ranks." />
+      <PageHead
+        eyebrow="Resume intelligence"
+        title="Score every open role"
+        subtitle={source === "resume" ? "Scores from your latest analyzed resume." : "Live profile match until a resume is analyzed."}
+      />
       <form onSubmit={upload} className="mb-6 flex gap-3 rounded-2xl border border-zinc-200 bg-white p-5">
         <input type="file" name="resume" accept=".pdf,.docx" className="text-sm" />
         <button className="btn-primary">Upload</button>
         <span className="self-center text-sm text-zinc-500">Status: {status}</span>
       </form>
-      <div className="mb-6 grid gap-3">
-        {fits.slice(0, 8).map((f) => (
-          <div key={`${f.company}-${f.title}`} className="rounded-2xl border border-zinc-200 bg-white p-4">
-            <div className="flex justify-between">
-              <div>
-                <p className="text-xs uppercase text-emerald-600">{f.company}</p>
-                <p className="font-heading text-lg">{f.title}</p>
-                <p className="text-xs text-zinc-500">Matched {f.matchedSkills?.join(", ")}</p>
-              </div>
-              <p className="font-heading text-2xl">{f.score}</p>
-            </div>
-          </div>
-        ))}
+
+      <div className="mb-6 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+          <p className={`font-heading text-4xl tabular-nums ${scoreTone(readiness)}`}>{readiness}</p>
+          <p className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Avg. readiness</p>
+        </div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+          <p className="font-heading text-4xl">{companies.length}</p>
+          <p className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Companies scored</p>
+        </div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+          <p className="font-heading text-4xl">{jobs.length}</p>
+          <p className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Roles scored</p>
+        </div>
       </div>
+
+      {extracted && (extracted.skills?.length || extracted.education?.length) ? (
+        <Section title="Extracted from resume" subtitle="Merged into your student profile">
+          <div className="flex flex-wrap gap-1.5">
+            {(extracted.skills ?? []).map((s) => <Chip key={s} tone="accent">{s}</Chip>)}
+          </div>
+          {(extracted.education ?? []).length > 0 && (
+            <p className="mt-3 text-sm text-zinc-600">
+              {(extracted.education ?? []).map((e) => [e.degree, e.school].filter(Boolean).join(" · ")).join(" · ")}
+            </p>
+          )}
+        </Section>
+      ) : null}
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Section title="Company fit" subtitle="Best role at each company">
+          <div className="space-y-4">
+            {companies.map((c) => (
+              <div key={c.company} className="rounded-xl border border-zinc-200 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-emerald-600">{c.company}</p>
+                    <p className="font-heading text-lg">{c.title}</p>
+                  </div>
+                  <p className={`font-heading text-2xl ${scoreTone(c.score)}`}>{Math.round(c.score)}%</p>
+                </div>
+                {c.factors && (
+                  <div className="mt-3 space-y-1.5">
+                    <FactorBar label="Skills" value={c.factors.skills ?? 0} />
+                    <FactorBar label="Experience" value={c.factors.experience ?? 0} />
+                    <FactorBar label="Salary" value={c.factors.salary ?? 0} />
+                    <FactorBar label="Education" value={c.factors.education ?? 0} />
+                    <FactorBar label="Projects" value={c.factors.projects ?? 0} />
+                  </div>
+                )}
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {(c.matchedSkills ?? []).slice(0, 6).map((s) => <Chip key={`m-${s}`} tone="accent">{s}</Chip>)}
+                  {(c.missingSkills ?? []).slice(0, 4).map((s) => <Chip key={`x-${s}`} tone="warn">{s}</Chip>)}
+                </div>
+              </div>
+            ))}
+            {!companies.length && <p className="text-sm text-zinc-500">No company scores yet. Save a profile or upload a resume.</p>}
+          </div>
+        </Section>
+
+        <Section title="Job fit" subtitle="Every open role, ranked">
+          <div className="space-y-3">
+            {jobs.map((f) => (
+              <div key={`${f.company}-${f.title}`} className="rounded-xl border border-zinc-200 p-4">
+                <div className="flex justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase text-emerald-600">{f.company}</p>
+                    <p className="font-heading text-lg">{f.title}</p>
+                    <p className="text-xs text-zinc-500">Matched {(f.matchedSkills ?? []).join(", ") || "—"}</p>
+                  </div>
+                  <p className={`font-heading text-2xl ${scoreTone(f.score)}`}>{Math.round(f.score)}%</p>
+                </div>
+                {f.factors && (
+                  <div className="mt-3 space-y-1.5">
+                    <FactorBar label="Skills" value={f.factors.skills ?? 0} />
+                    <FactorBar label="Experience" value={f.factors.experience ?? 0} />
+                    <FactorBar label="Salary" value={f.factors.salary ?? 0} />
+                  </div>
+                )}
+              </div>
+            ))}
+            {!jobs.length && <p className="text-sm text-zinc-500">No role scores yet.</p>}
+          </div>
+        </Section>
+      </div>
+
       {versions.length >= 2 && (
         <button
-          className="btn-ghost mb-6"
+          className="btn-ghost mb-6 mt-6"
           onClick={async () => {
             const [a, b] = versions;
             const data = await api<{ diff: { skillsAdded: string[]; skillsRemoved: string[] } }>(
@@ -82,26 +184,47 @@ export function ResumeIntelligence() {
         </button>
       )}
       {compare && <p className="mb-6 text-sm text-zinc-600">{compare}</p>}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h2 className="font-heading text-xl">Ask about your fit</h2>
+
+      <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-heading text-xl">Ask about your fit</h2>
+          {chat.length > 0 && (
+            <button
+              className="btn-ghost"
+              onClick={async () => {
+                await api("/v1/ai/chat", { method: "DELETE" });
+                setChat([]);
+              }}
+            >
+              Clear chat
+            </button>
+          )}
+        </div>
         <div className="mt-3 max-h-64 space-y-2 overflow-auto text-sm">
           {chat.map((c) => (
             <p key={c._id} className={c.role === "user" ? "text-zinc-900" : "text-zinc-600"}>
               <strong>{c.role}:</strong> {c.text}
             </p>
           ))}
+          {!chat.length && <p className="text-sm text-zinc-500">Ask why a company scored lower, or which skill to add next.</p>}
         </div>
         <form
           className="mt-3 flex gap-2"
           onSubmit={async (e) => {
             e.preventDefault();
-            await api("/v1/ai/ask", { method: "POST", body: JSON.stringify({ question }) });
-            setQuestion("");
-            refresh();
+            if (!question.trim() || asking) return;
+            setAsking(true);
+            try {
+              await api("/v1/ai/ask", { method: "POST", body: JSON.stringify({ question }) });
+              setQuestion("");
+              await refresh();
+            } finally {
+              setAsking(false);
+            }
           }}
         >
           <input className="input-base" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Why is my Nimbus score lower?" />
-          <button className="btn-primary">Ask</button>
+          <button className="btn-primary" disabled={asking}>{asking ? "…" : "Ask"}</button>
         </form>
       </div>
     </div>
