@@ -62,6 +62,14 @@ export class EventsProcessor extends WorkerHost {
         case EventTypes.JobChanged:
         case EventTypes.JobApproved:
           await this.recomputeRanks(payload);
+          if (type === EventTypes.ApplicationApplied && payload.recruiterId) {
+            await this.notes.notify(String(payload.recruiterId), {
+              type: "application_applied",
+              title: "New application",
+              body: "A student applied to one of your roles",
+              link: "/dashboard/recruiter",
+            });
+          }
           if (type === EventTypes.JobApproved && payload.postedBy) {
             await this.notes.notify(String(payload.postedBy), {
               type: "job_approved",

@@ -7,6 +7,8 @@ import { AuthUser } from "../common/types";
 import { EventTypes } from "../common/types";
 import { OutboxService } from "../infra/outbox/outbox.service";
 import { REDIS } from "../infra/redis/redis.module";
+import { oid } from "../common/oid";
+import { Application, ApplicationDocument } from "../applications/schemas/application.schema";
 import { Job, JobDocument } from "./schemas/job.schema";
 import { StudentProfile, StudentProfileDocument } from "./schemas/profile.schema";
 import { CreateJobDto, UpsertProfileDto } from "./dto/catalog.dto";
@@ -18,12 +20,13 @@ export class CatalogService {
   constructor(
     @InjectModel(Job.name) private readonly jobs: Model<JobDocument>,
     @InjectModel(StudentProfile.name) private readonly profiles: Model<StudentProfileDocument>,
+    @InjectModel(Application.name) private readonly apps: Model<ApplicationDocument>,
     private readonly outbox: OutboxService,
     @Inject(REDIS) private readonly redis: Redis,
   ) {}
 
   async getProfile(userId: string) {
-    const doc = await this.profiles.findOne({ userId }).lean();
+    const doc = await this.profiles.findOne({ userId: oid(userId) }).lean();
     return (
       doc ?? {
         userId,
@@ -43,8 +46,8 @@ export class CatalogService {
     const update: Record<string, unknown> = { ...dto };
     if (dto.skills) update.skills = lower(dto.skills);
     const doc = await this.profiles.findOneAndUpdate(
-      { userId },
-      { $set: update },
+      { userId: oid(userId) },
+      { $set: { ...update, userId: oid(userId) } },
       { new: true, upsert: true },
     );
     await this.outbox.emit(EventTypes.ProfileUpdated, { userId });
@@ -91,6 +94,19 @@ export class CatalogService {
         .lean(),
       this.jobs.countDocuments(filter),
     ]);
+    if (user.role === "recruiter" && items.length) {
+      const counts = await this.apps.aggregate<{ _id: Types.ObjectId; n: number }>([
+        { $match: { jobId: { $in: items.map((j) => j._id) } } },
+        { $group: { _id: "$jobId", n: { $sum: 1 } } },
+      ]);
+      const byJob = new Map(counts.map((c) => [String(c._id), c.n]));
+      return {
+        items: items.map((j) => ({ ...j, totalApplicants: byJob.get(String(j._id)) ?? 0 })),
+        total,
+        page,
+        pageSize,
+      };
+    }
     return { items, total, page, pageSize };
   }
 

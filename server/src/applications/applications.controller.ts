@@ -24,8 +24,12 @@ export class ApplicationsController {
 
   @Roles("student")
   @Get("me")
-  mine(@CurrentUser() user: AuthUser, @Query("page") page?: string) {
-    return this.apps.mine(user.userId, Number(page ?? 1));
+  mine(
+    @CurrentUser() user: AuthUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    return this.apps.mine(user.userId, Number(page ?? 1), Number(pageSize ?? 10));
   }
 
   @Roles("recruiter", "admin")

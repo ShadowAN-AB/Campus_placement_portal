@@ -10,6 +10,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
 import { Model } from "mongoose";
 import Redis from "ioredis";
+import { oid } from "../common/oid";
 import { AuthUser, EventTypes } from "../common/types";
 import { REDIS } from "../infra/redis/redis.module";
 import { OutboxService } from "../infra/outbox/outbox.service";
@@ -90,13 +91,18 @@ export class InterviewsService {
 
   async list(user: AuthUser, upcoming?: boolean) {
     const filter: Record<string, unknown> = {};
-    if (user.role === "student") filter.studentId = user.userId;
-    else if (user.role === "recruiter") filter.recruiterId = user.userId;
+    if (user.role === "student") filter.studentId = oid(user.userId);
+    else if (user.role === "recruiter") filter.recruiterId = oid(user.userId);
     if (upcoming) {
       filter.status = "scheduled";
       filter.scheduledAt = { $gte: new Date() };
     }
-    return this.interviews.find(filter).sort({ scheduledAt: 1 }).lean();
+    return this.interviews
+      .find(filter)
+      .populate("jobId", "title company")
+      .populate("studentId", "name email")
+      .sort({ scheduledAt: 1 })
+      .lean();
   }
 
   async get(user: AuthUser, id: string) {
