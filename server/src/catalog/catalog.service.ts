@@ -55,8 +55,8 @@ export class CatalogService {
   }
 
   async listJobs(user: AuthUser, query: { page?: number; pageSize?: number; company?: string }) {
-    const page = Math.max(1, Number(query.page ?? 1));
-    const pageSize = Math.min(50, Math.max(1, Number(query.pageSize ?? 20)));
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(50, Math.max(1, Number(query.pageSize) || 20));
     const filter: Record<string, unknown> = {};
     if (user.role === "student") Object.assign(filter, { approved: true, status: "active" });
     if (user.role === "recruiter") filter.postedBy = idMatch(user.userId);
@@ -80,8 +80,10 @@ export class CatalogService {
         const items = scored
           .map((s) => (byId.has(s.id) ? { ...byId.get(s.id), matchScore: s.score } : null))
           .filter(Boolean);
-        const start = (page - 1) * pageSize;
-        return { items: items.slice(start, start + pageSize), total: items.length, page, pageSize };
+        if (items.length) {
+          const start = (page - 1) * pageSize;
+          return { items: items.slice(start, start + pageSize), total: items.length, page, pageSize };
+        }
       }
     }
 

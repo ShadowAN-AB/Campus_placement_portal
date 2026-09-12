@@ -31,7 +31,11 @@ export class CatalogController {
     @Query("pageSize") pageSize?: string,
     @Query("company") company?: string,
   ) {
-    return this.catalog.listJobs(user, { page: Number(page), pageSize: Number(pageSize), company });
+    return this.catalog.listJobs(user, {
+      page: Number(page ?? 1) || 1,
+      pageSize: Number(pageSize ?? 20) || 20,
+      company,
+    });
   }
 
   @Get("jobs/:jobId")
