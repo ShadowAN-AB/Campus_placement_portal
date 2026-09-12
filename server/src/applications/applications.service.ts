@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
-import { oid } from "../common/oid";
+import { idMatch, oid } from "../common/oid";
 import { AuthUser, EventTypes } from "../common/types";
 import { OutboxService } from "../infra/outbox/outbox.service";
 import { Job, JobDocument } from "../catalog/schemas/job.schema";
@@ -34,7 +34,9 @@ export class ApplicationsService {
       const replay = await this.apps.findOne({ idempotencyKey: key });
       if (replay) return { ...replay.toObject(), replayed: true };
     }
-    const profile = await this.profiles.findOne({ userId: oid(user.userId) }).lean();
+    const already = await this.apps.findOne({ studentId: idMatch(user.userId), jobId: idMatch(job._id) });
+    if (already) return { ...already.toObject(), replayed: true };
+    const profile = await this.profiles.findOne({ userId: idMatch(user.userId) }).lean();
     const match = calculateMatchScore({
       studentSkills: profile?.skills ?? [],
       requiredSkills: job.requiredSkills,
@@ -46,15 +48,15 @@ export class ApplicationsService {
     });
     try {
       const app = await this.apps.create({
-        studentId: user.userId,
+        studentId: oid(user.userId),
         jobId: job._id,
         status: "pending",
         matchScore: match.score,
         idempotencyKey: key,
       });
       await this.scores.findOneAndUpdate(
-        { studentId: user.userId, jobId: job._id },
-        { $set: { score: match.score, matchedSkills: match.matchedSkills, missingSkills: match.missingSkills } },
+        { studentId: oid(user.userId), jobId: job._id },
+        { $set: { studentId: oid(user.userId), score: match.score, matchedSkills: match.matchedSkills, missingSkills: match.missingSkills } },
         { upsert: true },
       );
       await this.outbox.emit(EventTypes.ApplicationApplied, {
@@ -72,7 +74,7 @@ export class ApplicationsService {
   }
 
   async mine(userId: string, page = 1, pageSize = 20) {
-    const filter = { studentId: oid(userId) };
+    const filter = { studentId: idMatch(userId) };
     const [items, total] = await Promise.all([
       this.apps
         .find(filter)
@@ -92,7 +94,7 @@ export class ApplicationsService {
     if (String(job.postedBy) !== user.userId && user.role !== "admin") throw new ForbiddenException();
     const page = Math.max(1, Number(query.page ?? 1));
     const pageSize = Math.min(50, Math.max(1, Number(query.pageSize ?? 20)));
-    const filter: Record<string, unknown> = { jobId: oid(jobId) };
+    const filter: Record<string, unknown> = { jobId: idMatch(jobId) };
     if (query.status) filter.status = query.status;
     if (query.minMatchScore) filter.matchScore = { $gte: Number(query.minMatchScore) };
     const sortBy = query.sortBy === "appliedAt" ? "appliedAt" : "matchScore";
@@ -169,8 +171,8 @@ export class ApplicationsService {
     if (apps.length !== ids.length) throw new ForbiddenException("Unknown applications");
     const jobIds = [...new Set(apps.map((a) => String(a.jobId)))];
     const owned = await this.jobs.countDocuments({
-      _id: { $in: jobIds },
-      postedBy: user.userId,
+      _id: { $in: jobIds.map((id) => oid(id)) },
+      postedBy: idMatch(user.userId),
     });
     if (owned !== jobIds.length) throw new ForbiddenException("Not all applications are yours");
     await this.apps.updateMany({ _id: { $in: ids } }, { $set: { status: dto.status } });

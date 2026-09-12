@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { RefId } from "../../common/oid";
 
 @Schema({ _id: false })
 class Education {
@@ -23,7 +24,7 @@ class Project {
 
 @Schema({ timestamps: true })
 export class StudentProfile {
-  @Prop({ type: Types.ObjectId, ref: "User", unique: true, required: true })
+  @Prop({ type: RefId, ref: "User", unique: true, required: true })
   userId: Types.ObjectId;
 
   @Prop({ type: [String], default: [] })

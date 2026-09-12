@@ -1,10 +1,11 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { RefId } from "../../common/oid";
 import { ResumeStatus } from "../../common/types";
 
 @Schema({ timestamps: true })
 export class ResumeUpload {
-  @Prop({ type: Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({ type: RefId, ref: "User", required: true, index: true })
   userId: Types.ObjectId;
 
   @Prop({ required: true })

@@ -1,12 +1,13 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { RefId } from "../../common/oid";
 
 @Schema({ timestamps: true })
 export class MatchScore {
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: RefId, ref: "User", required: true })
   studentId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Job", required: true })
+  @Prop({ type: RefId, ref: "Job", required: true })
   jobId: Types.ObjectId;
 
   @Prop({ required: true })

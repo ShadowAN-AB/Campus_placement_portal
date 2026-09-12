@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { RefId } from "../../common/oid";
 
 @Schema({ timestamps: true })
 export class Job {
@@ -30,7 +31,7 @@ export class Job {
   @Prop({ default: false, index: true })
   approved: boolean;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({ type: RefId, ref: "User", required: true, index: true })
   postedBy: Types.ObjectId;
 }
 

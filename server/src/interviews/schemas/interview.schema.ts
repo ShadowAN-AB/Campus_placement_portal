@@ -1,19 +1,20 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { RefId } from "../../common/oid";
 import { InterviewStatus } from "../../common/types";
 
 @Schema({ timestamps: true })
 export class Interview {
-  @Prop({ type: Types.ObjectId, ref: "Application", required: true, unique: true })
+  @Prop({ type: RefId, ref: "Application", required: true, unique: true })
   applicationId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({ type: RefId, ref: "User", required: true, index: true })
   studentId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({ type: RefId, ref: "User", required: true, index: true })
   recruiterId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Job", required: true })
+  @Prop({ type: RefId, ref: "Job", required: true })
   jobId: Types.ObjectId;
 
   @Prop({ required: true })

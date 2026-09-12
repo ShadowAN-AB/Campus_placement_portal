@@ -1,13 +1,14 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { RefId } from "../../common/oid";
 import { ApplicationStatus } from "../../common/types";
 
 @Schema({ timestamps: true })
 export class Application {
-  @Prop({ type: Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({ type: RefId, ref: "User", required: true, index: true })
   studentId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Job", required: true, index: true })
+  @Prop({ type: RefId, ref: "Job", required: true, index: true })
   jobId: Types.ObjectId;
 
   @Prop({ default: "pending", enum: ["pending", "shortlisted", "rejected", "interview"] })

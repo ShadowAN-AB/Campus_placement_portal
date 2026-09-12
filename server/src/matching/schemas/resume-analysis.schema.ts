@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { RefId } from "../../common/oid";
 
 @Schema({ _id: false })
 class Factors {
@@ -12,7 +13,7 @@ class Factors {
 
 @Schema({ _id: false })
 class JobFit {
-  @Prop({ type: Types.ObjectId })
+  @Prop({ type: RefId })
   jobId: Types.ObjectId;
   @Prop()
   title: string;
@@ -30,10 +31,10 @@ class JobFit {
 
 @Schema({ timestamps: true })
 export class ResumeAnalysis {
-  @Prop({ type: Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({ type: RefId, ref: "User", required: true, index: true })
   userId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "ResumeUpload", required: true })
+  @Prop({ type: RefId, ref: "ResumeUpload", required: true })
   resumeId: Types.ObjectId;
 
   @Prop({ type: Object, default: {} })

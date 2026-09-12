@@ -10,7 +10,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
 import { Model } from "mongoose";
 import Redis from "ioredis";
-import { oid } from "../common/oid";
+import { idMatch, oid } from "../common/oid";
 import { AuthUser, EventTypes } from "../common/types";
 import { REDIS } from "../infra/redis/redis.module";
 import { OutboxService } from "../infra/outbox/outbox.service";
@@ -57,8 +57,8 @@ export class InterviewsService {
       if (conflict) throw new ConflictException("Student already has an interview in this window");
       const interview = await this.interviews.create({
         applicationId: app._id,
-        studentId: app.studentId,
-        recruiterId: user.userId,
+        studentId: oid(app.studentId),
+        recruiterId: oid(user.userId),
         jobId: job._id,
         scheduledAt: when,
         durationMinutes: duration,
@@ -91,8 +91,8 @@ export class InterviewsService {
 
   async list(user: AuthUser, upcoming?: boolean) {
     const filter: Record<string, unknown> = {};
-    if (user.role === "student") filter.studentId = oid(user.userId);
-    else if (user.role === "recruiter") filter.recruiterId = oid(user.userId);
+    if (user.role === "student") filter.studentId = idMatch(user.userId);
+    else if (user.role === "recruiter") filter.recruiterId = idMatch(user.userId);
     if (upcoming) {
       filter.status = "scheduled";
       filter.scheduledAt = { $gte: new Date() };
@@ -212,7 +212,7 @@ export class InterviewsService {
   }
 
   private async hasConflict(studentId: string, when: Date, duration: number, exceptId?: string) {
-    const candidates = await this.interviews.find({ studentId, status: "scheduled" }).lean();
+    const candidates = await this.interviews.find({ studentId: idMatch(studentId), status: "scheduled" }).lean();
     const hit = candidates.some((row) => {
       if (exceptId && String(row._id) === exceptId) return false;
       return interviewWindowsOverlap(row.scheduledAt, row.durationMinutes, when, duration);

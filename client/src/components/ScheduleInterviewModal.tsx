@@ -32,6 +32,7 @@ export function ScheduleInterviewModal({
   const [saving, setSaving] = useState(false);
 
   if (!open || !application) return null;
+  const app = application;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -54,7 +55,7 @@ export function ScheduleInterviewModal({
       await api("/v1/interviews", {
         method: "POST",
         body: JSON.stringify({
-          applicationId: application._id,
+          applicationId: app._id,
           scheduledAt: scheduledAt.toISOString(),
           durationMinutes: Number(form.durationMinutes),
           meetingType: form.meetingType,
@@ -81,7 +82,7 @@ export function ScheduleInterviewModal({
       >
         <h3 className="font-heading text-xl">Schedule interview</h3>
         <p className="mt-1 text-sm text-zinc-500">
-          {application.studentId?.name || "Candidate"} · {application.studentId?.email || ""} · {Math.round(application.matchScore || 0)}% match
+          {app.studentId?.name || "Candidate"} · {app.studentId?.email || ""} · {Math.round(app.matchScore || 0)}% match
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <input className="input-base" type="date" min={tomorrow} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />

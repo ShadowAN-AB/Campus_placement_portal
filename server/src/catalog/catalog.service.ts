@@ -7,7 +7,7 @@ import { AuthUser } from "../common/types";
 import { EventTypes } from "../common/types";
 import { OutboxService } from "../infra/outbox/outbox.service";
 import { REDIS } from "../infra/redis/redis.module";
-import { oid } from "../common/oid";
+import { idMatch, oid } from "../common/oid";
 import { Application, ApplicationDocument } from "../applications/schemas/application.schema";
 import { Job, JobDocument } from "./schemas/job.schema";
 import { StudentProfile, StudentProfileDocument } from "./schemas/profile.schema";
@@ -26,7 +26,7 @@ export class CatalogService {
   ) {}
 
   async getProfile(userId: string) {
-    const doc = await this.profiles.findOne({ userId: oid(userId) }).lean();
+    const doc = await this.profiles.findOne({ userId: idMatch(userId) }).lean();
     return (
       doc ?? {
         userId,
@@ -46,7 +46,7 @@ export class CatalogService {
     const update: Record<string, unknown> = { ...dto };
     if (dto.skills) update.skills = lower(dto.skills);
     const doc = await this.profiles.findOneAndUpdate(
-      { userId: oid(userId) },
+      { userId: idMatch(userId) },
       { $set: { ...update, userId: oid(userId) } },
       { new: true, upsert: true },
     );
@@ -59,7 +59,7 @@ export class CatalogService {
     const pageSize = Math.min(50, Math.max(1, Number(query.pageSize ?? 20)));
     const filter: Record<string, unknown> = {};
     if (user.role === "student") Object.assign(filter, { approved: true, status: "active" });
-    if (user.role === "recruiter") filter.postedBy = new Types.ObjectId(user.userId);
+    if (user.role === "recruiter") filter.postedBy = idMatch(user.userId);
     if (query.company) filter.company = new RegExp(query.company, "i");
 
     if (user.role === "student") {
@@ -128,7 +128,7 @@ export class CatalogService {
       requiredSkills: lower(dto.requiredSkills),
       approved: false,
       status: "active",
-      postedBy: user.userId,
+      postedBy: oid(user.userId),
     });
   }
 
