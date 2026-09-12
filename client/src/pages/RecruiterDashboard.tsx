@@ -9,6 +9,7 @@ type Job = {
   _id: string;
   title: string;
   company: string;
+  description?: string;
   approved: boolean;
   status: string;
   requiredSkills?: string[];
@@ -49,6 +50,16 @@ export function RecruiterDashboard() {
   const [filters, setFilters] = useState(emptyFilters);
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [scheduleFor, setScheduleFor] = useState<AppRow | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [edit, setEdit] = useState({
+    title: "",
+    company: "",
+    description: "",
+    requiredSkills: "",
+    minExperience: 0,
+    minSalary: 0,
+    maxSalary: 0,
+  });
   const [form, setForm] = useState({
     title: "",
     company: "",
@@ -134,6 +145,63 @@ export function RecruiterDashboard() {
     if (selected) loadApps(selected, appPage);
   }
 
+  function startEdit(job: Job) {
+    setEdit({
+      title: job.title,
+      company: job.company,
+      description: job.description ?? "",
+      requiredSkills: (job.requiredSkills ?? []).join(", "),
+      minExperience: job.minExperience ?? 0,
+      minSalary: job.minSalary ?? 0,
+      maxSalary: job.maxSalary ?? 0,
+    });
+    setEditing(true);
+  }
+
+  async function saveJob() {
+    if (!selected) return;
+    setError("");
+    try {
+      await api(`/v1/jobs/${selected}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          ...edit,
+          requiredSkills: edit.requiredSkills.split(",").map((s) => s.trim()).filter(Boolean),
+          minExperience: Number(edit.minExperience),
+          minSalary: Number(edit.minSalary),
+          maxSalary: Number(edit.maxSalary),
+        }),
+      });
+      setEditing(false);
+      await loadJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update role");
+    }
+  }
+
+  async function closeJob() {
+    if (!selected) return;
+    setError("");
+    try {
+      await api(`/v1/jobs/${selected}`, { method: "DELETE" });
+      setEditing(false);
+      await loadJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to close role");
+    }
+  }
+
+  async function reopenJob() {
+    if (!selected) return;
+    setError("");
+    try {
+      await api(`/v1/jobs/${selected}/reopen`, { method: "POST" });
+      await loadJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reopen role");
+    }
+  }
+
   const selectedJob = jobs.find((j) => j._id === selected);
 
   return (
@@ -166,8 +234,15 @@ export function RecruiterDashboard() {
         <div className="space-y-4 lg:col-span-2">
           <div className="flex flex-wrap gap-2">
             {jobs.map((j) => (
-              <button key={j._id} onClick={() => setSelected(j._id)} className={selected === j._id ? "btn-primary" : "btn-ghost"}>
-                {j.title} {!j.approved ? "(pending)" : ""} · {j.totalApplicants ?? 0}
+              <button
+                key={j._id}
+                onClick={() => {
+                  setSelected(j._id);
+                  setEditing(false);
+                }}
+                className={selected === j._id ? "btn-primary" : "btn-ghost"}
+              >
+                {j.title} {!j.approved ? "(pending)" : j.status === "closed" ? "(closed)" : ""} · {j.totalApplicants ?? 0}
               </button>
             ))}
           </div>
@@ -184,11 +259,31 @@ export function RecruiterDashboard() {
                     {(selectedJob.requiredSkills ?? []).map((s) => <Chip key={s}>{s}</Chip>)}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={!selectedJob.approved ? "awaiting" : selectedJob.status === "closed" ? "closed" : "live"} />
                   <Link to={`/jobs/${selectedJob._id}`} className="btn-ghost">Details</Link>
+                  <button className="btn-ghost" onClick={() => (editing ? setEditing(false) : startEdit(selectedJob))}>
+                    {editing ? "Cancel edit" : "Edit"}
+                  </button>
+                  {selectedJob.status === "closed" ? (
+                    <button className="btn-accent" onClick={reopenJob}>Reopen</button>
+                  ) : (
+                    <button className="btn-danger" onClick={closeJob}>Close role</button>
+                  )}
                 </div>
               </div>
+              {editing && (
+                <div className="mt-4 grid gap-3 border-t border-zinc-100 pt-4 md:grid-cols-2">
+                  <input className="input-base" placeholder="Title" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} />
+                  <input className="input-base" placeholder="Company" value={edit.company} onChange={(e) => setEdit({ ...edit, company: e.target.value })} />
+                  <input className="input-base md:col-span-2" placeholder="Skills (comma)" value={edit.requiredSkills} onChange={(e) => setEdit({ ...edit, requiredSkills: e.target.value })} />
+                  <textarea className="input-base md:col-span-2" placeholder="Description" value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
+                  <input className="input-base" type="number" min={0} placeholder="Min years" value={edit.minExperience} onChange={(e) => setEdit({ ...edit, minExperience: Number(e.target.value) })} />
+                  <input className="input-base" type="number" min={0} placeholder="Min CTC" value={edit.minSalary} onChange={(e) => setEdit({ ...edit, minSalary: Number(e.target.value) })} />
+                  <input className="input-base" type="number" min={0} placeholder="Max CTC" value={edit.maxSalary} onChange={(e) => setEdit({ ...edit, maxSalary: Number(e.target.value) })} />
+                  <button className="btn-primary" onClick={saveJob}>Save changes</button>
+                </div>
+              )}
             </div>
           )}
 

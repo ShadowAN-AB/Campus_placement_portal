@@ -155,6 +155,16 @@ export class CatalogService {
     return job;
   }
 
+  async reopenJob(user: AuthUser, jobId: string) {
+    const job = await this.jobs.findById(jobId);
+    if (!job) throw new NotFoundException("Job not found");
+    if (String(job.postedBy) !== user.userId) throw new ForbiddenException();
+    job.status = "active";
+    await job.save();
+    await this.outbox.emit(EventTypes.JobChanged, { jobId });
+    return job;
+  }
+
   async pendingApprovals(page = 1, pageSize = 20) {
     const filter = { approved: false, status: "active" };
     const [items, total] = await Promise.all([

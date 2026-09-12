@@ -61,6 +61,12 @@ export class CatalogController {
     return this.catalog.closeJob(user, jobId);
   }
 
+  @Roles("recruiter")
+  @Post("jobs/:jobId/reopen")
+  reopenJob(@CurrentUser() user: AuthUser, @Param("jobId") jobId: string) {
+    return this.catalog.reopenJob(user, jobId);
+  }
+
   @Roles("admin")
   @Get("admin/approvals")
   approvals(@Query("page") page?: string) {
