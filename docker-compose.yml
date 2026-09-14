@@ -1,3 +1,29 @@
+x-env: &env
+  NODE_ENV: production
+  APP_URL: http://localhost:8080
+  CLIENT_ORIGIN: http://localhost:8080
+  MONGODB_URI: mongodb://mongo:27017/placecell
+  REDIS_URL: redis://redis:6379
+  JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string-prod}
+  ADMIN_SIGNUP_CODE: ${ADMIN_SIGNUP_CODE:-change-me-too-prod}
+  STORAGE_BACKEND: s3
+  S3_BUCKET: placecell-resumes
+  S3_REGION: us-east-1
+  S3_ACCESS_KEY_ID: minio
+  S3_SECRET_ACCESS_KEY: minio12345
+  S3_ENDPOINT: http://minio:9000
+  LLM_PROVIDER: ollama
+
+x-feature: &feature
+  build:
+    context: .
+    dockerfile: server/Dockerfile
+  command: node dist/main.js
+  depends_on:
+    - mongo
+    - redis
+    - minio
+
 services:
   mongo:
     image: mongo:7
@@ -24,63 +50,68 @@ services:
     volumes:
       - minio_data:/data
 
-  api:
-    build:
-      context: .
-      dockerfile: server/Dockerfile
-    command: node dist/main.js
+  identity:
+    <<: *feature
     environment:
-      PORT: 5050
-      NODE_ENV: production
-      APP_URL: http://localhost:8080
-      CLIENT_ORIGIN: http://localhost:8080
-      MONGODB_URI: mongodb://mongo:27017/placecell
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string-prod}
-      ADMIN_SIGNUP_CODE: ${ADMIN_SIGNUP_CODE:-change-me-too-prod}
-      STORAGE_BACKEND: s3
-      S3_BUCKET: placecell-resumes
-      S3_REGION: us-east-1
-      S3_ACCESS_KEY_ID: minio
-      S3_SECRET_ACCESS_KEY: minio12345
-      S3_ENDPOINT: http://minio:9000
-      LLM_PROVIDER: ollama
-    depends_on:
-      - mongo
-      - redis
-      - minio
+      <<: *env
+      SERVICE: identity
+      PORT: 5051
     expose:
-      - "5050"
-    deploy:
-      replicas: 1
+      - "5051"
 
-  api-b:
-    build:
-      context: .
-      dockerfile: server/Dockerfile
-    command: node dist/main.js
+  catalog:
+    <<: *feature
     environment:
-      PORT: 5050
-      NODE_ENV: production
-      APP_URL: http://localhost:8080
-      CLIENT_ORIGIN: http://localhost:8080
-      MONGODB_URI: mongodb://mongo:27017/placecell
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string-prod}
-      ADMIN_SIGNUP_CODE: ${ADMIN_SIGNUP_CODE:-change-me-too-prod}
-      STORAGE_BACKEND: s3
-      S3_BUCKET: placecell-resumes
-      S3_REGION: us-east-1
-      S3_ACCESS_KEY_ID: minio
-      S3_SECRET_ACCESS_KEY: minio12345
-      S3_ENDPOINT: http://minio:9000
-      LLM_PROVIDER: ollama
-    depends_on:
-      - mongo
-      - redis
-      - minio
+      <<: *env
+      SERVICE: catalog
+      PORT: 5052
     expose:
-      - "5050"
+      - "5052"
+
+  applications:
+    <<: *feature
+    environment:
+      <<: *env
+      SERVICE: applications
+      PORT: 5053
+    expose:
+      - "5053"
+
+  matching:
+    <<: *feature
+    environment:
+      <<: *env
+      SERVICE: matching
+      PORT: 5054
+    expose:
+      - "5054"
+
+  interviews:
+    <<: *feature
+    environment:
+      <<: *env
+      SERVICE: interviews
+      PORT: 5055
+    expose:
+      - "5055"
+
+  notifications:
+    <<: *feature
+    environment:
+      <<: *env
+      SERVICE: notifications
+      PORT: 5056
+    expose:
+      - "5056"
+
+  analytics:
+    <<: *feature
+    environment:
+      <<: *env
+      SERVICE: analytics
+      PORT: 5057
+    expose:
+      - "5057"
 
   worker:
     build:
@@ -88,19 +119,7 @@ services:
       dockerfile: server/Dockerfile
     command: node dist/worker.js
     environment:
-      NODE_ENV: production
-      APP_URL: http://localhost:8080
-      MONGODB_URI: mongodb://mongo:27017/placecell
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string-prod}
-      ADMIN_SIGNUP_CODE: ${ADMIN_SIGNUP_CODE:-change-me-too-prod}
-      STORAGE_BACKEND: s3
-      S3_BUCKET: placecell-resumes
-      S3_REGION: us-east-1
-      S3_ACCESS_KEY_ID: minio
-      S3_SECRET_ACCESS_KEY: minio12345
-      S3_ENDPOINT: http://minio:9000
-      LLM_PROVIDER: ollama
+      <<: *env
     depends_on:
       - mongo
       - redis
@@ -113,8 +132,13 @@ services:
     volumes:
       - ./docs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - api
-      - api-b
+      - identity
+      - catalog
+      - applications
+      - matching
+      - interviews
+      - notifications
+      - analytics
 
 volumes:
   mongo_data:
