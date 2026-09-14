@@ -226,7 +226,7 @@ export function RecruiterDashboard() {
         <Kpi label="Total applicants" value={totals.applicants} />
       </div>
 
-      <form onSubmit={createJob} className="mb-8 grid gap-3 rounded-2xl border border-zinc-200 bg-white p-5 md:grid-cols-2">
+      <form onSubmit={createJob} className="surface mb-8 grid gap-3 p-5 md:grid-cols-2">
         <input className="input-base" placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
         <input className="input-base" placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} required />
         <input className="input-base md:col-span-2" placeholder="Skills (comma)" value={form.requiredSkills} onChange={(e) => setForm({ ...form, requiredSkills: e.target.value })} />

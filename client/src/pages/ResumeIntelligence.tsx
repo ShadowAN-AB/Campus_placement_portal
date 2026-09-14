@@ -132,31 +132,41 @@ export function ResumeIntelligence() {
         subtitle={source === "resume" ? "Scores from your latest analyzed resume." : "Live profile match until a resume is analyzed."}
       />
       {matchingDown && <ServiceNotice name="resume intelligence" />}
-      <form onSubmit={upload} className="mb-6 space-y-3 rounded-2xl border border-zinc-200 bg-white p-5">
-        <div className="flex flex-wrap items-center gap-3">
+      <form onSubmit={upload} className="surface mb-6 p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-heading text-lg tracking-tight">Upload a resume</p>
+            <p className="mt-0.5 text-sm text-zinc-500">PDF or Word, up to 10 MB. Analysis runs in the background.</p>
+          </div>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${health?.healthy ? "bg-emerald-50 text-emerald-800" : "bg-zinc-100 text-zinc-600"}`}>
+            AI {health?.healthy ? "ready" : "regex fallback"}
+          </span>
+        </div>
+        <label className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 px-6 py-10 text-center transition hover:border-emerald-600 hover:bg-emerald-50/40">
           <input
             type="file"
             name="resume"
             accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="text-sm"
+            className="sr-only"
             onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
           />
-          <button className="btn-primary" disabled={uploading || busy}>{uploading ? "Uploading…" : busy ? "Analyzing…" : "Upload"}</button>
-          <span className="text-sm text-zinc-600">
+          <p className="text-sm font-medium text-zinc-800">{fileName || status.filename || "Drop a PDF or DOCX here, or click to browse"}</p>
+          <p className="mt-1 text-xs text-zinc-500">
             {STATUS_LABEL[status.status] ?? status.status}
-            {status.filename ? ` · ${status.filename}` : fileName ? ` · ${fileName}` : ""}
-            {status.version ? ` · v${status.version}` : ""}
-          </span>
-          <span className={`text-xs ${health?.healthy ? "text-emerald-700" : "text-zinc-500"}`}>
-            AI {health?.healthy ? "ready" : "fallback"}
-          </span>
+            {status.version ? ` · version ${status.version}` : ""}
+          </p>
+        </label>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button className="btn-primary" disabled={uploading || busy || matchingDown}>
+            {uploading ? "Uploading…" : busy ? "Analyzing…" : "Analyse resume"}
+          </button>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {status.status === "failed" && status.error && <p className="text-sm text-red-600">{status.error}</p>}
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {status.status === "failed" && status.error && <p className="text-sm text-red-600">{status.error}</p>}
         {versions.length > 0 && (
-          <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
+          <div className="mt-4 flex flex-wrap gap-2">
             {versions.map((v) => (
-              <span key={v.resumeId} className="rounded-full border border-zinc-200 px-2 py-1">
+              <span key={v.resumeId} className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-600">
                 v{v.version} {v.filename} · top {Math.round(v.topScore)}%
               </span>
             ))}
@@ -165,17 +175,17 @@ export function ResumeIntelligence() {
       </form>
 
       <div className="mb-6 grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-          <p className={`font-heading text-4xl tabular-nums ${scoreTone(readiness)}`}>{readiness}</p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Avg. readiness</p>
+        <div className="surface p-5">
+          <p className="label-caps">Avg. readiness</p>
+          <p className={`mt-2 font-heading text-4xl tabular-nums tracking-tight ${scoreTone(readiness)}`}>{readiness}</p>
         </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-          <p className="font-heading text-4xl">{companies.length}</p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Companies scored</p>
+        <div className="surface p-5">
+          <p className="label-caps">Companies scored</p>
+          <p className="mt-2 font-heading text-4xl tracking-tight">{companies.length}</p>
         </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-          <p className="font-heading text-4xl">{jobs.length}</p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Roles scored</p>
+        <div className="surface p-5">
+          <p className="label-caps">Roles scored</p>
+          <p className="mt-2 font-heading text-4xl tracking-tight">{jobs.length}</p>
         </div>
       </div>
 

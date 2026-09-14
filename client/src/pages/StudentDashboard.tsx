@@ -154,7 +154,7 @@ export function StudentDashboard() {
       </div>
 
       <form
-        className="mb-8 grid gap-3 rounded-2xl border border-zinc-200 bg-white p-5 md:grid-cols-4"
+        className="surface mb-8 grid gap-3 p-5 md:grid-cols-4"
         onSubmit={async (e) => {
           e.preventDefault();
           await api("/v1/profile", {
@@ -190,8 +190,10 @@ export function StudentDashboard() {
                       {(job.requiredSkills ?? []).slice(0, 6).map((s) => <Chip key={s}>{s}</Chip>)}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-                    {job.matchScore != null && <p className="font-heading text-2xl text-emerald-700">{Math.round(job.matchScore)}%</p>}
+                    <div className="flex items-center gap-3 sm:flex-col sm:items-end">
+                      {job.matchScore != null && (
+                        <p className="font-heading text-2xl tabular-nums text-emerald-700">{Math.round(job.matchScore)}%</p>
+                      )}
                     <div className="flex gap-2">
                       <Link to={`/jobs/${job._id}`} className="btn-ghost">View</Link>
                       {appliedIds.has(job._id) ? (
