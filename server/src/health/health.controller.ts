@@ -14,7 +14,7 @@ export class HealthController {
 
   @Get("health")
   health() {
-    return { ok: true, service: "placecell-api" };
+    return { ok: true, service: process.env.SERVICE ?? "all" };
   }
 
   @Get("ready")
