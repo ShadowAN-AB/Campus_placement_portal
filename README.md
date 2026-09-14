@@ -6,19 +6,27 @@ This is a new system. It is not a fork of the earlier Express/Vercel app.
 
 ## Architecture
 
-- **API** — NestJS modular monolith (`identity`, `catalog`, `applications`, `matching`, `interviews`, `notifications`, `analytics`)
+- **Gateway** — Node (`server/src/gateway.ts` on :5050) locally, nginx on :8080 in Compose. Routes each `/v1/...` prefix to one feature process.
+- **Feature services** — identity :5051, catalog :5052, applications :5053, matching :5054, interviews :5055, notifications :5056, analytics :5057
 - **Worker** — same modules, BullMQ processors for LLM, email, ranking, rollups
-- **Client** — React 19 + Vite + Tailwind
+- **Client** — React 19 + Vite + Tailwind. Loads each feature independently so one 503 does not blank the page.
 - **Data** — MongoDB (source of truth) · Redis (cache, locks, queues) · MinIO/S3 (resumes)
 
 Apply and interview booking are CP (unique indexes + locks + idempotency keys). Job feed and notifications are AP (short-TTL cache).
 
 ```
-User → CDN/SPA → API replicas → Redis / Mongo / S3
+User → CDN/SPA → gateway (nginx or node)
+                 ├ identity
+                 ├ catalog (jobs, profile, approvals)
+                 ├ applications
+                 ├ matching (resume, AI)
+                 ├ interviews
+                 ├ notifications
+                 └ analytics
                          ↘ outbox → worker → email, LLM, analytics
 ```
 
-Two API replicas sit behind nginx in Compose (`api` + `api-b`) to prove the process is stateless.
+If matching dies, jobs and apply still work. If analytics dies, admin can still approve roles.
 
 ## Quick start
 
@@ -33,8 +41,8 @@ npm install --prefix server
 npm install --prefix client
 
 npm run seed
-npm run dev:worker   # terminal 2 — required for resume analyze + mail
-npm run dev          # API :5050 + client :5173
+npm run dev          # gateway + 7 feature services + worker + client
+# npm run dev:mono   # single Nest process on :5050 (e2e / quick debug)
 ```
 
 Open http://localhost:5173
@@ -55,17 +63,29 @@ node docs/load-jobs.mjs   # job-list p95 smoke, API must be up
 
 Server unit tests always run. HTTP e2e (`test/app.e2e.spec.ts`) runs on Linux CI via `mongodb-memory-server`. On macOS ARM, set `E2E_MONGODB_URI` to a running Mongo (Compose `mongo`) to execute them locally.
 
-## Two-replica proof
+## Feature isolation
+
+`npm run dev` starts one process per feature behind the gateway on :5050. Vite still proxies `/v1` there.
+
+To prove a down feature does not take the site with it:
+
+```bash
+# after npm run dev is up
+kill $(lsof -t -i:5054)   # matching / resume
+# Jobs, apply, interviews still load. Resume page shows “service unavailable”.
+```
+
+Compose:
 
 ```bash
 export JWT_SECRET=change-me-to-a-long-random-string-prod
 export ADMIN_SIGNUP_CODE=change-me-too-prod
-docker compose up --build api api-b worker proxy mongo redis minio
+docker compose up --build
 curl http://localhost:8080/health
-curl http://localhost:8080/ready
+curl http://localhost:8080/v1/jobs   # needs a Bearer token
 ```
 
-Nginx (`docs/nginx.conf`) balances `/v1` across `api` and `api-b`.
+Nginx (`docs/nginx.conf`) sends `/v1/resumes` to matching, `/v1/jobs` to catalog, `/v1/auth` to identity, and so on.
 
 ## Environment
 
@@ -91,7 +111,7 @@ See [server/.env.example](server/.env.example). In `NODE_ENV=production` the pro
 
 ## Deploy
 
-Host API + worker on Fly, Railway, or Render (always-on). Serve `client/dist` from a CDN. Do not put the API on serverless if you need workers or multi-replica sockets.
+Host each feature service + worker on Fly, Railway, or Render (always-on). Put nginx (or the Node gateway) in front. Serve `client/dist` from a CDN. Do not put these APIs on serverless if you need workers or in-process sockets.
 
 ## License
 

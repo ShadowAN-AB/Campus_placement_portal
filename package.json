@@ -8,7 +8,8 @@
     "client"
   ],
   "scripts": {
-    "dev": "concurrently -n api,web -c blue,green \"npm run start:dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev": "concurrently -n gw,id,cat,app,match,iv,nt,an,worker,web -c blue,cyan,green,magenta,yellow,red,white,gray,blueBright,greenBright \"npm run start:gw --prefix server\" \"npm run start:identity --prefix server\" \"npm run start:catalog --prefix server\" \"npm run start:applications --prefix server\" \"npm run start:matching --prefix server\" \"npm run start:interviews --prefix server\" \"npm run start:notifications --prefix server\" \"npm run start:analytics --prefix server\" \"npm run start:worker --prefix server\" \"npm run dev --prefix client\"",
+    "dev:mono": "concurrently -n api,web -c blue,green \"npm run start:dev --prefix server\" \"npm run dev --prefix client\"",
     "dev:api": "npm run start:dev --prefix server",
     "dev:worker": "npm run start:worker --prefix server",
     "dev:client": "npm run dev --prefix client",
