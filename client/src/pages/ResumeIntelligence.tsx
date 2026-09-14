@@ -142,19 +142,21 @@ export function ResumeIntelligence() {
             AI {health?.healthy ? "ready" : "regex fallback"}
           </span>
         </div>
-        <label className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 px-6 py-10 text-center transition hover:border-emerald-600 hover:bg-emerald-50/40">
+        <label className="relative mt-5 block cursor-pointer overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 text-center transition hover:border-emerald-600 hover:bg-emerald-50/40">
           <input
             type="file"
             name="resume"
             accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="sr-only"
+            className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
             onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
           />
-          <p className="text-sm font-medium text-zinc-800">{fileName || status.filename || "Drop a PDF or DOCX here, or click to browse"}</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            {STATUS_LABEL[status.status] ?? status.status}
-            {status.version ? ` · version ${status.version}` : ""}
-          </p>
+          <div className="pointer-events-none px-6 py-10">
+            <p className="truncate text-sm font-medium text-zinc-800">{fileName || status.filename || "Drop a PDF or DOCX here, or click to browse"}</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              {STATUS_LABEL[status.status] ?? status.status}
+              {status.version ? ` · version ${status.version}` : ""}
+            </p>
+          </div>
         </label>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button className="btn-primary" disabled={uploading || busy || matchingDown}>
