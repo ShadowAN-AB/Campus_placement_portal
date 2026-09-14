@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../utils/api";
+import { api, apiTry } from "../utils/api";
 
 type Note = { _id: string; title: string; body: string; link?: string; read: boolean };
 
@@ -8,11 +8,13 @@ export function Bell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Note[]>([]);
   const [unread, setUnread] = useState(0);
+  const [down, setDown] = useState(false);
 
   async function load() {
-    const data = await api<{ items: Note[]; unreadCount: number }>("/v1/notifications");
-    setItems(data.items);
-    setUnread(data.unreadCount);
+    const data = await apiTry<{ items: Note[]; unreadCount: number }>("/v1/notifications", { items: [], unreadCount: 0 });
+    setDown(data.down);
+    setItems(data.data.items);
+    setUnread(data.data.unreadCount);
   }
 
   useEffect(() => {
@@ -59,7 +61,9 @@ export function Bell() {
               <p className="text-xs text-zinc-500">{n.body}</p>
             </Link>
           ))}
-          {!items.length && <p className="px-3 py-4 text-sm text-zinc-500">No notifications yet.</p>}
+          {!items.length && (
+            <p className="px-3 py-4 text-sm text-zinc-500">{down ? "Inbox service is unavailable." : "No notifications yet."}</p>
+          )}
         </div>
       )}
     </div>

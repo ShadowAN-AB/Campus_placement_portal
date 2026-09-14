@@ -2,8 +2,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ScheduleInterviewModal } from "../components/ScheduleInterviewModal";
 import { PageHead } from "../components/Shell";
-import { Chip, Kpi, Section, StatusBadge } from "../components/ui";
-import { api, inr } from "../utils/api";
+import { Chip, Kpi, Section, ServiceNotice, StatusBadge } from "../components/ui";
+import { api, apiTry, inr } from "../utils/api";
 
 type Job = {
   _id: string;
@@ -70,11 +70,14 @@ export function RecruiterDashboard() {
     maxSalary: 0,
   });
   const [error, setError] = useState("");
+  const [jobsDown, setJobsDown] = useState(false);
+  const [appsDown, setAppsDown] = useState(false);
 
   async function loadJobs() {
-    const data = await api<{ items: Job[] }>("/v1/jobs?pageSize=50");
-    setJobs(data.items);
-    if (!selected && data.items[0]) setSelected(data.items[0]._id);
+    const data = await apiTry<{ items: Job[] }>("/v1/jobs?pageSize=50", { items: [] });
+    setJobsDown(data.down);
+    setJobs(data.data.items);
+    if (!selected && data.data.items[0]) setSelected(data.data.items[0]._id);
   }
 
   async function loadApps(jobId: string, page = 1, nextFilters = filters) {
@@ -88,13 +91,15 @@ export function RecruiterDashboard() {
     if (nextFilters.status) params.set("status", nextFilters.status);
     if (nextFilters.minMatchScore) params.set("minMatchScore", nextFilters.minMatchScore);
     if (nextFilters.skill) params.set("skill", nextFilters.skill);
-    const data = await api<{ items: AppRow[]; total: number; totalPages: number; page: number }>(
+    const data = await apiTry<{ items: AppRow[]; total: number; totalPages: number; page: number }>(
       `/v1/applications/job/${jobId}?${params.toString()}`,
+      { items: [], total: 0, totalPages: 1, page },
     );
-    setApps(data.items);
-    setAppTotal(data.total);
-    setAppPages(data.totalPages ?? 1);
-    setAppPage(data.page ?? page);
+    setAppsDown(data.down);
+    setApps(data.data.items);
+    setAppTotal(data.data.total);
+    setAppPages(data.data.totalPages ?? 1);
+    setAppPage(data.data.page ?? page);
     setPicked([]);
   }
 
@@ -212,6 +217,8 @@ export function RecruiterDashboard() {
         subtitle="Post roles, filter applicants, and schedule interviews."
       />
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {jobsDown && <ServiceNotice name="jobs" />}
+      {appsDown && <ServiceNotice name="applications" />}
       <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="Roles posted" value={totals.roles} />
         <Kpi label="Active roles" value={totals.active} />

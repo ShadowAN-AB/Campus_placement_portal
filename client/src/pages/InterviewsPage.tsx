@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { PageHead } from "../components/Shell";
-import { StatusBadge, countdown } from "../components/ui";
+import { ServiceNotice, StatusBadge, countdown } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../utils/api";
+import { api, apiTry } from "../utils/api";
 
 type Interview = {
   _id: string;
@@ -20,9 +20,12 @@ type Interview = {
 export function InterviewsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<Interview[]>([]);
+  const [down, setDown] = useState(false);
 
   async function load() {
-    setItems(await api<Interview[]>("/v1/interviews"));
+    const res = await apiTry<Interview[]>("/v1/interviews", []);
+    setDown(res.down);
+    setItems(res.data);
   }
   useEffect(() => {
     load();
@@ -31,6 +34,7 @@ export function InterviewsPage() {
   return (
     <div>
       <PageHead eyebrow="Interviews" title="Calendar" subtitle="Join links, calendar files, and recruiter actions." />
+      {down && <ServiceNotice name="interviews" />}
       <div className="space-y-3">
         {items.map((i) => (
           <div key={i._id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4">

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PageHead } from "../components/Shell";
-import { Chip, StatusBadge } from "../components/ui";
+import { Chip, StatusBadge, ServiceNotice } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
-import { api, inr } from "../utils/api";
+import { api, apiTry, inr } from "../utils/api";
 
 type Application = { _id: string; status: string; matchScore: number; jobId?: { _id?: string } };
 
@@ -12,6 +12,7 @@ export function JobDetailPage() {
   const { user } = useAuth();
   const [job, setJob] = useState<Record<string, unknown> | null>(null);
   const [msg, setMsg] = useState("");
+  const [catalogDown, setCatalogDown] = useState(false);
   const [applied, setApplied] = useState<Application | null>(null);
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState({
@@ -25,7 +26,10 @@ export function JobDetailPage() {
   });
 
   async function reload() {
-    const j = (await api(`/v1/jobs/${jobId}`)) as Record<string, unknown>;
+    const res = await apiTry<Record<string, unknown> | null>(`/v1/jobs/${jobId}`, null);
+    setCatalogDown(res.down);
+    if (!res.data) return;
+    const j = res.data;
     setJob(j);
     setEdit({
       title: String(j.title ?? ""),
@@ -47,7 +51,9 @@ export function JobDetailPage() {
     }
   }, [jobId, user?.role]);
 
-  if (!job) return <p>Loading…</p>;
+  if (!job) {
+    return catalogDown ? <ServiceNotice name="jobs" /> : <p>Loading…</p>;
+  }
   const closed = job.status === "closed";
 
   return (

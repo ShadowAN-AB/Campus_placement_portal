@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PageHead } from "../components/Shell";
-import { api, inr } from "../utils/api";
+import { ServiceNotice } from "../components/ui";
+import { api, apiTry, inr } from "../utils/api";
 
 type Analytics = {
   totals: { students: number; recruiters: number; jobs: number; applications: number };
@@ -15,14 +16,18 @@ type Job = { _id: string; title: string; company: string };
 export function AdminDashboard() {
   const [data, setData] = useState<Analytics | null>(null);
   const [pending, setPending] = useState<Job[]>([]);
+  const [analyticsDown, setAnalyticsDown] = useState(false);
+  const [catalogDown, setCatalogDown] = useState(false);
 
   async function load() {
     const [a, p] = await Promise.all([
-      api<Analytics>("/v1/admin/analytics"),
-      api<{ items: Job[] }>("/v1/admin/approvals"),
+      apiTry<Analytics | null>("/v1/admin/analytics", null),
+      apiTry<{ items: Job[] }>("/v1/admin/approvals", { items: [] }),
     ]);
-    setData(a);
-    setPending(p.items);
+    setAnalyticsDown(a.down);
+    setCatalogDown(p.down);
+    setData(a.data);
+    setPending(p.data.items);
   }
 
   useEffect(() => {
@@ -32,6 +37,8 @@ export function AdminDashboard() {
   return (
     <div>
       <PageHead eyebrow="Admin" title="Placement cell" subtitle="Analytics are snapshot reads, not live scans." />
+      {analyticsDown && <ServiceNotice name="analytics" />}
+      {catalogDown && <ServiceNotice name="jobs" />}
       {data && (
         <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
           <Kpi label="Students" value={data.totals.students} />

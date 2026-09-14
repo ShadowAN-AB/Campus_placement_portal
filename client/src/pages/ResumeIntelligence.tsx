@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PageHead } from "../components/Shell";
-import { Chip, FactorBar, Section, scoreTone } from "../components/ui";
-import { api } from "../utils/api";
+import { Chip, FactorBar, Section, ServiceNotice, scoreTone } from "../components/ui";
+import { api, apiTry } from "../utils/api";
 
 type Factors = { skills?: number; experience?: number; salary?: number; education?: number; projects?: number };
 type Fit = {
@@ -43,28 +43,30 @@ export function ResumeIntelligence() {
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
   const [health, setHealth] = useState<Health | null>(null);
+  const [matchingDown, setMatchingDown] = useState(false);
 
   const busy = ["uploaded", "parsing", "extracted"].includes(status.status);
 
   async function refresh() {
     const [st, jobRes, companyRes, vers, history, ai] = await Promise.all([
-      api<ResumeStatus>("/v1/resumes/status"),
-      api<Fit[] | FitRes>("/v1/fit/jobs"),
-      api<Fit[] | FitRes>("/v1/fit/companies"),
-      api<Version[]>("/v1/resumes/versions"),
-      api<Chat[]>("/v1/ai/chat"),
-      api<Health>("/v1/ai/health").catch(() => ({ healthy: false })),
+      apiTry<ResumeStatus>("/v1/resumes/status", { status: "none" }),
+      apiTry<Fit[] | FitRes>("/v1/fit/jobs", { items: [] }),
+      apiTry<Fit[] | FitRes>("/v1/fit/companies", { items: [] }),
+      apiTry<Version[]>("/v1/resumes/versions", []),
+      apiTry<Chat[]>("/v1/ai/chat", []),
+      apiTry<Health>("/v1/ai/health", { healthy: false }),
     ]);
-    const jobPayload = Array.isArray(jobRes) ? { items: jobRes } : jobRes;
-    const companyPayload = Array.isArray(companyRes) ? { items: companyRes } : companyRes;
-    setStatus(st);
+    setMatchingDown(st.down);
+    const jobPayload = Array.isArray(jobRes.data) ? { items: jobRes.data } : jobRes.data;
+    const companyPayload = Array.isArray(companyRes.data) ? { items: companyRes.data } : companyRes.data;
+    setStatus(st.data);
     setJobs(jobPayload.items ?? []);
     setCompanies(companyPayload.items ?? []);
     setExtracted(jobPayload.extractedData ?? companyPayload.extractedData ?? null);
     setSource(jobPayload.source ?? companyPayload.source ?? "profile");
-    setVersions(vers);
-    setChat(history);
-    setHealth(ai);
+    setVersions(vers.data);
+    setChat(history.data);
+    setHealth(ai.data);
   }
 
   useEffect(() => {
@@ -129,6 +131,7 @@ export function ResumeIntelligence() {
         title="Score every open role"
         subtitle={source === "resume" ? "Scores from your latest analyzed resume." : "Live profile match until a resume is analyzed."}
       />
+      {matchingDown && <ServiceNotice name="resume intelligence" />}
       <form onSubmit={upload} className="mb-6 space-y-3 rounded-2xl border border-zinc-200 bg-white p-5">
         <div className="flex flex-wrap items-center gap-3">
           <input

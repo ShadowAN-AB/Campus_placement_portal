@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageHead } from "../components/Shell";
-import { Chip, Kpi, Section, StatusBadge, countdown } from "../components/ui";
-import { api, inr } from "../utils/api";
+import { Chip, Kpi, Section, StatusBadge, ServiceNotice, countdown } from "../components/ui";
+import { api, apiTry, inr } from "../utils/api";
 
 type Job = {
   _id: string;
@@ -44,28 +44,39 @@ export function StudentDashboard() {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [error, setError] = useState("");
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [down, setDown] = useState({ catalog: false, applications: false, interviews: false });
 
   async function load(page = appPage) {
     const [jobRes, appRes, allApps, me, ivs] = await Promise.all([
-      api<{ items: Job[] }>("/v1/jobs"),
-      api<{ items: Application[]; total: number; totalPages: number; page: number }>(`/v1/applications/me?page=${page}&pageSize=10`),
-      api<{ items: Application[] }>("/v1/applications/me?page=1&pageSize=50"),
-      api<Profile>("/v1/profile"),
-      api<Interview[]>("/v1/interviews?upcoming=true"),
+      apiTry<{ items: Job[] }>("/v1/jobs", { items: [] }),
+      apiTry<{ items: Application[]; total: number; totalPages: number; page: number }>(`/v1/applications/me?page=${page}&pageSize=10`, {
+        items: [],
+        total: 0,
+        totalPages: 1,
+        page,
+      }),
+      apiTry<{ items: Application[] }>("/v1/applications/me?page=1&pageSize=50", { items: [] }),
+      apiTry<Profile>("/v1/profile", { skills: [], bio: "", expectedSalary: 0, yearsOfExperience: 0 }),
+      apiTry<Interview[]>("/v1/interviews?upcoming=true", []),
     ]);
-    setJobs(jobRes.items);
-    setApps(appRes.items);
-    setAppTotal(appRes.total);
-    setAppPages(appRes.totalPages ?? 1);
-    setAppPage(appRes.page ?? page);
-    setProfile({
-      skills: (me.skills ?? []).join(", "),
-      bio: me.bio ?? "",
-      expectedSalary: me.expectedSalary ?? 0,
-      yearsOfExperience: me.yearsOfExperience ?? 0,
+    setDown({
+      catalog: jobRes.down || me.down,
+      applications: appRes.down || allApps.down,
+      interviews: ivs.down,
     });
-    setInterviews(ivs);
-    setAppliedIds(new Set(allApps.items.map((a) => String(a.jobId?._id ?? "")).filter(Boolean)));
+    setJobs(jobRes.data.items);
+    setApps(appRes.data.items);
+    setAppTotal(appRes.data.total);
+    setAppPages(appRes.data.totalPages ?? 1);
+    setAppPage(appRes.data.page ?? page);
+    setProfile({
+      skills: (me.data.skills ?? []).join(", "),
+      bio: me.data.bio ?? "",
+      expectedSalary: me.data.expectedSalary ?? 0,
+      yearsOfExperience: me.data.yearsOfExperience ?? 0,
+    });
+    setInterviews(ivs.data);
+    setAppliedIds(new Set(allApps.data.items.map((a) => String(a.jobId?._id ?? "")).filter(Boolean)));
   }
 
   useEffect(() => {
@@ -132,6 +143,9 @@ export function StudentDashboard() {
         }
       />
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {down.catalog && <ServiceNotice name="jobs / profile" />}
+      {down.applications && <ServiceNotice name="applications" />}
+      {down.interviews && <ServiceNotice name="interviews" />}
       <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="Applications" value={appTotal} />
         <Kpi label="Shortlisted / Interview" value={stats.shortlisted} />
@@ -189,7 +203,9 @@ export function StudentDashboard() {
                   </div>
                 </div>
               ))}
-              {!jobs.length && <p className="text-sm text-zinc-500">No open roles yet.</p>}
+              {!jobs.length && (
+                <p className="text-sm text-zinc-500">{down.catalog ? "Jobs service is down." : "No open roles yet."}</p>
+              )}
             </div>
           </Section>
 
@@ -229,7 +245,9 @@ export function StudentDashboard() {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-zinc-500">No applications yet. Apply to a role above to get started.</p>
+              <p className="text-sm text-zinc-500">
+                {down.applications ? "Applications service is down." : "No applications yet. Apply to a role above to get started."}
+              </p>
             )}
           </Section>
         </div>
@@ -279,7 +297,7 @@ export function StudentDashboard() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-500">Nothing on the calendar yet.</p>
+              <p className="text-sm text-zinc-500">{down.interviews ? "Interviews service is down." : "Nothing on the calendar yet."}</p>
             )}
           </Section>
         </div>
