@@ -41,9 +41,20 @@ export function ResumeIntelligence() {
   const [asking, setAsking] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState("");
   const [health, setHealth] = useState<Health | null>(null);
   const [matchingDown, setMatchingDown] = useState(false);
+
+  function attachFile(file?: File | null) {
+    if (!file) return;
+    const input = document.getElementById("resume-file") as HTMLInputElement | null;
+    if (!input) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    setFileName(file.name);
+  }
 
   const busy = ["uploaded", "parsing", "extracted"].includes(status.status);
 
@@ -150,7 +161,22 @@ export function ResumeIntelligence() {
           className="sr-only"
           onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
         />
-        <label htmlFor="resume-file" className="mt-5 block cursor-pointer rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 px-6 py-10 text-center transition hover:border-emerald-600 hover:bg-emerald-50/40">
+        <label
+          htmlFor="resume-file"
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            attachFile(e.dataTransfer.files?.[0]);
+          }}
+          className={`mt-5 block cursor-pointer rounded-xl border border-dashed px-6 py-10 text-center transition ${
+            dragging ? "border-emerald-600 bg-emerald-50/70" : "border-zinc-300 bg-zinc-50/80 hover:border-emerald-600 hover:bg-emerald-50/40"
+          }`}
+        >
           <p className="text-sm font-medium text-zinc-800">{fileName || status.filename || "Drop a PDF or DOCX here, or click to browse"}</p>
           <p className="mt-1 text-xs text-zinc-500">
             {STATUS_LABEL[status.status] ?? status.status}

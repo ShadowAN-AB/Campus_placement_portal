@@ -37,7 +37,7 @@ export function InterviewsPage() {
       {down && <ServiceNotice name="interviews" />}
       <div className="space-y-3">
         {items.map((i) => (
-          <div key={i._id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+          <div key={i._id} className="surface flex flex-wrap items-center justify-between gap-3 p-5">
             <div>
               <p className="font-medium">{i.jobId?.title || "Interview"}</p>
               <p className="text-sm text-zinc-500">

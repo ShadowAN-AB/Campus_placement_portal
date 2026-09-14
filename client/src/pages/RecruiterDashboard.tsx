@@ -324,45 +324,53 @@ export function RecruiterDashboard() {
             </div>
           )}
 
-          <table className="w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white text-sm">
-            <thead className="bg-stone-50 text-left text-zinc-500">
-              <tr>
-                <th className="p-3">
-                  <input type="checkbox" onChange={(e) => setPicked(e.target.checked ? apps.map((a) => a._id) : [])} />
-                </th>
-                <th className="p-3">Candidate</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Score</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {apps.map((a) => (
-                <tr key={a._id} className="border-t border-zinc-100">
-                  <td className="p-3">
-                    <input type="checkbox" checked={picked.includes(a._id)} onChange={(e) => setPicked(e.target.checked ? [...picked, a._id] : picked.filter((id) => id !== a._id))} />
-                  </td>
-                  <td className="p-3 font-medium">{a.studentId?.name ?? "—"}</td>
-                  <td className="p-3 text-zinc-600">{a.studentId?.email ?? "—"}</td>
-                  <td className="p-3 tabular-nums">{Math.round(a.matchScore || 0)}%</td>
-                  <td className="p-3"><StatusBadge status={a.status} /></td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      <button className="btn-accent" onClick={() => setStatus(a._id, "shortlisted")}>Shortlist</button>
-                      <button className="btn-ghost" onClick={() => setScheduleFor(a)}>Schedule</button>
-                      <button className="btn-danger" onClick={() => setStatus(a._id, "rejected")}>Reject</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!apps.length && (
-                <tr>
-                  <td className="p-4 text-zinc-500" colSpan={6}>No applicants for this role{selectedJob && !selectedJob.approved ? " yet — it is still awaiting approval." : "."}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-zinc-50 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                  <tr>
+                    <th className="p-3">
+                      <input type="checkbox" onChange={(e) => setPicked(e.target.checked ? apps.map((a) => a._id) : [])} />
+                    </th>
+                    <th className="p-3">Candidate</th>
+                    <th className="p-3">Email</th>
+                    <th className="p-3">Score</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {apps.map((a) => (
+                    <tr key={a._id} className="border-t border-zinc-100">
+                      <td className="p-3">
+                        <input type="checkbox" checked={picked.includes(a._id)} onChange={(e) => setPicked(e.target.checked ? [...picked, a._id] : picked.filter((id) => id !== a._id))} />
+                      </td>
+                      <td className="p-3 font-medium">{a.studentId?.name ?? "—"}</td>
+                      <td className="p-3 text-zinc-600">{a.studentId?.email ?? "—"}</td>
+                      <td className="p-3 tabular-nums font-medium text-emerald-700">{Math.round(a.matchScore || 0)}%</td>
+                      <td className="p-3"><StatusBadge status={a.status} /></td>
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          <button className="btn-accent !px-3 !py-1.5" onClick={() => setStatus(a._id, "shortlisted")}>Shortlist</button>
+                          <button className="btn-ghost !px-3 !py-1.5" onClick={() => setScheduleFor(a)}>Schedule</button>
+                          <button className="btn-danger !px-3 !py-1.5" onClick={() => setStatus(a._id, "rejected")}>Reject</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!apps.length && (
+                    <tr>
+                      <td className="p-5 text-zinc-500" colSpan={6}>
+                        {appsDown
+                          ? "Applications service is unavailable."
+                          : `No applicants for this role${selectedJob && !selectedJob.approved ? " yet — it is still awaiting approval." : "."}`}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
           <div className="flex items-center justify-between text-xs text-zinc-500">
             <p>{appTotal} result(s) · Page {appPage} of {appPages}</p>
             <div className="flex gap-2">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PageHead } from "../components/Shell";
-import { ServiceNotice } from "../components/ui";
+import { Kpi, ServiceNotice } from "../components/ui";
 import { api, apiTry, inr } from "../utils/api";
 
 type Analytics = {
@@ -47,46 +47,63 @@ export function AdminDashboard() {
           <Kpi label="Avg package" value={inr(data.avgPackage)} />
         </div>
       )}
-      <h2 className="mb-3 font-heading text-xl">Pending approvals</h2>
-      <div className="space-y-2">
-        {pending.map((j) => (
-          <div key={j._id} className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4">
-            <div>
-              <p className="font-medium">{j.title}</p>
-              <p className="text-sm text-zinc-500">{j.company}</p>
-            </div>
-            <button
-              className="btn-accent"
-              onClick={async () => {
-                await api(`/v1/admin/jobs/${j._id}/approve`, { method: "POST" });
-                load();
-              }}
-            >
-              Approve
-            </button>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <h2 className="mb-3 font-heading text-xl tracking-tight">Pending approvals</h2>
+          <div className="space-y-2">
+            {pending.map((j) => (
+              <div key={j._id} className="surface flex items-center justify-between p-4">
+                <div>
+                  <p className="font-medium">{j.title}</p>
+                  <p className="text-sm text-zinc-500">{j.company}</p>
+                </div>
+                <button
+                  className="btn-accent"
+                  onClick={async () => {
+                    await api(`/v1/admin/jobs/${j._id}/approve`, { method: "POST" });
+                    load();
+                  }}
+                >
+                  Approve
+                </button>
+              </div>
+            ))}
+            {!pending.length && <p className="text-sm text-zinc-500">Nothing waiting.</p>}
           </div>
-        ))}
-        {!pending.length && <p className="text-sm text-zinc-500">Nothing waiting.</p>}
+        </div>
+        {data && (
+          <div className="surface p-5">
+            <h2 className="font-heading text-lg tracking-tight">Top companies</h2>
+            <p className="mt-0.5 text-sm text-zinc-500">By applications this snapshot</p>
+            <ul className="mt-4 space-y-3">
+              {(data.topCompanies ?? []).slice(0, 6).map((c) => (
+                <li key={c.company} className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{c.company}</span>
+                  <span className="tabular-nums text-zinc-500">{c.count}</span>
+                </li>
+              ))}
+              {!(data.topCompanies ?? []).length && <li className="text-sm text-zinc-500">No company volume yet.</li>}
+            </ul>
+          </div>
+        )}
       </div>
       {data && (
-        <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5">
-          <h2 className="mb-3 font-heading text-xl">12-month applications</h2>
-          <div className="flex h-32 items-end gap-1">
+        <div className="surface mt-8 p-5">
+          <h2 className="mb-4 font-heading text-xl tracking-tight">12-month applications</h2>
+          <div className="flex h-36 items-end gap-1.5">
             {data.trend.map((t) => (
-              <div key={t.month} className="flex-1 bg-emerald-600/80" style={{ height: `${Math.max(8, t.applications * 12)}%` }} title={`${t.month}: ${t.applications}`} />
+              <div key={t.month} className="flex flex-1 flex-col items-center gap-1">
+                <div
+                  className="w-full rounded-t-sm bg-emerald-700/85"
+                  style={{ height: `${Math.max(8, t.applications * 12)}%` }}
+                  title={`${t.month}: ${t.applications}`}
+                />
+                <span className="hidden text-[10px] text-zinc-400 sm:block">{t.month.slice(5)}</span>
+              </div>
             ))}
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Kpi({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-      <p className="font-heading text-2xl">{value}</p>
-      <p className="text-xs uppercase tracking-wide text-zinc-500">{label}</p>
     </div>
   );
 }

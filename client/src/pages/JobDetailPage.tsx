@@ -64,11 +64,13 @@ export function JobDetailPage() {
         subtitle={`${inr(Number(job.minSalary))} – ${inr(Number(job.maxSalary))}`}
         actions={closed ? <StatusBadge status="closed" /> : undefined}
       />
-      <p className="mb-6 text-zinc-600">{String(job.description)}</p>
-      <div className="mb-6 flex flex-wrap gap-1.5">
-        {((job.requiredSkills as string[]) ?? []).map((s) => (
-          <Chip key={s}>{s}</Chip>
-        ))}
+      <div className="surface mb-6 p-6">
+        <p className="text-sm leading-relaxed text-zinc-600">{String(job.description)}</p>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {((job.requiredSkills as string[]) ?? []).map((s) => (
+            <Chip key={s}>{s}</Chip>
+          ))}
+        </div>
       </div>
       {user?.role === "student" && !applied && !closed && (
         <button
