@@ -25,25 +25,26 @@ export function Bell() {
 
   return (
     <div className="relative">
-      <button className="btn-ghost relative" onClick={() => setOpen((o) => !o)}>
+      <button className="btn-ghost relative !px-3 !py-1.5" onClick={() => setOpen((o) => !o)}>
         Inbox
         {unread > 0 && (
-          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald-600 px-1 text-[10px] text-white">
+          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald-700 px-1 text-[10px] font-semibold text-white">
             {unread}
           </span>
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-zinc-200 bg-white p-2">
-          <div className="flex justify-between px-2 py-1 text-xs text-zinc-500">
-            <span>Notifications</span>
+        <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-zinc-200 bg-white p-2">
+          <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-500">
+            <span className="font-medium text-zinc-800">Notifications</span>
             <button
+              className="hover:text-zinc-800"
               onClick={async () => {
                 await api("/v1/notifications/read-all", { method: "POST" });
                 load();
               }}
             >
-              Mark all
+              Mark all read
             </button>
           </div>
           {items.slice(0, 8).map((n) => (
@@ -55,14 +56,16 @@ export function Bell() {
                 setOpen(false);
                 load();
               }}
-              className="block rounded-lg px-3 py-2 hover:bg-stone-50"
+              className="block rounded-xl px-3 py-2.5 hover:bg-zinc-50"
             >
-              <p className="text-sm font-medium">{n.title}</p>
-              <p className="text-xs text-zinc-500">{n.body}</p>
+              <p className="text-sm font-medium text-zinc-900">{n.title}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{n.body}</p>
             </Link>
           ))}
           {!items.length && (
-            <p className="px-3 py-4 text-sm text-zinc-500">{down ? "Inbox service is unavailable." : "No notifications yet."}</p>
+            <p className="px-3 py-6 text-center text-sm text-zinc-500">
+              {down ? "Inbox service is unavailable." : "No notifications yet."}
+            </p>
           )}
         </div>
       )}

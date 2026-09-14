@@ -18,36 +18,49 @@ export function Shell({ children }: { children: React.ReactNode }) {
             ["/interviews", "Interviews"],
           ]
         : [["/dashboard/admin", "Admin"]];
+  const initials = (user?.name ?? "P")
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-md bg-zinc-900 font-heading text-sm text-white">
-              P
-            </span>
-            <span className="font-heading text-lg">PlaceCell.</span>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-20 border-b border-zinc-200/80 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-5 px-6">
+          <Link to="/" className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-900 font-heading text-sm text-white">P</span>
+            <span className="font-heading text-lg tracking-tight">PlaceCell</span>
           </Link>
-          <span className="text-xs uppercase tracking-wide text-emerald-600">{user?.role}</span>
-          <nav className="ml-6 flex gap-3 text-sm">
+          <span className="hidden rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-800 sm:inline">
+            {user?.role}
+          </span>
+          <nav className="ml-2 flex gap-1 text-sm">
             {tabs.map(([to, label]) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }) =>
-                  isActive ? "font-medium text-emerald-700" : "text-zinc-600 hover:text-zinc-900"
+                  `rounded-lg px-3 py-1.5 transition ${
+                    isActive ? "bg-zinc-900 font-medium text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                  }`
                 }
               >
                 {label}
               </NavLink>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2">
             <Bell />
-            <span className="rounded-full bg-stone-100 px-3 py-1 text-sm">{user?.name}</span>
+            <div className="hidden items-center gap-2 rounded-full border border-zinc-200 bg-white py-1 pl-1 pr-3 sm:flex">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-700 text-[11px] font-semibold text-white">
+                {initials}
+              </span>
+              <span className="max-w-[10rem] truncate text-sm font-medium">{user?.name}</span>
+            </div>
             <button
-              className="btn-ghost"
+              className="btn-ghost !px-3 !py-1.5"
               onClick={async () => {
                 await logout();
                 navigate("/auth");
@@ -58,7 +71,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
     </div>
   );
 }
@@ -76,12 +89,12 @@ export function PageHead({
 }) {
   return (
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">{eyebrow}</p>
-        <h1 className="font-heading text-3xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>}
+      <div className="max-w-2xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700">{eyebrow}</p>
+        <h1 className="mt-1 font-heading text-3xl tracking-tight text-zinc-950">{title}</h1>
+        {subtitle && <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">{subtitle}</p>}
       </div>
-      {actions}
+      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );
 }
