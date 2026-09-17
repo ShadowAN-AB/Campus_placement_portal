@@ -1,8 +1,10 @@
 # PlaceCell — Campus Placement Portal
 
-Campus placement platform for students, recruiters, and the placement cell. Async resume scoring, idempotent apply, interview locks, and snapshot analytics.
+Campus placement platform for students, recruiters, and the placement cell. Each feature runs as its own process so one outage does not take the site down.
 
-This is a new system. It is not a fork of the earlier Express/Vercel app.
+**For project evaluation, read this README and [docs/architecture-report.html](docs/architecture-report.html)** (open the HTML in a browser). That report walks through architecture, every feature, data, Docker, and how to demo.
+
+This is a new NestJS system. It is not a fork of the earlier Express/Vercel app.
 
 ## Architecture
 
@@ -35,7 +37,6 @@ cd placecell
 cp server/.env.example server/.env
 # edit JWT_SECRET and ADMIN_SIGNUP_CODE before any production deploy
 
-docker compose up -d mongo redis minio
 npm install
 npm install --prefix server
 npm install --prefix client
@@ -45,7 +46,7 @@ npm run dev          # gateway + 7 feature services + worker + client
 # npm run dev:mono   # single Nest process on :5050 (e2e / quick debug)
 ```
 
-Open http://localhost:5173
+Open http://localhost:5173. Local npm uses Homebrew/host Mongo at `mongodb://127.0.0.1:27017/nexus`.
 
 | Role | Email | Password |
 |---|---|---|
@@ -75,17 +76,29 @@ kill $(lsof -t -i:5054)   # matching / resume
 # Jobs, apply, interviews still load. Resume page shows “service unavailable”.
 ```
 
-Compose:
+### Docker
+
+Homebrew Mongo already uses `:27017` (`nexus`). Compose does **not** steal that port.
 
 ```bash
-export JWT_SECRET=change-me-to-a-long-random-string-prod
-export ADMIN_SIGNUP_CODE=change-me-too-prod
-docker compose up --build
-curl http://localhost:8080/health
-curl http://localhost:8080/v1/jobs   # needs a Bearer token
+npm run docker:up      # Mongo, Redis, MinIO, 7 services, worker, nginx+SPA
+npm run docker:seed    # demo users/jobs into the Docker DB
+# npm run docker:infra # Mongo/Redis/MinIO only
+# npm run docker:down
 ```
 
-Nginx (`docs/nginx.conf`) sends `/v1/resumes` to matching, `/v1/jobs` to catalog, `/v1/auth` to identity, and so on.
+| | Local npm | Docker Compose |
+|---|---|---|
+| App | http://localhost:5173 | http://localhost:8080 |
+| Mongo (Compass) | `127.0.0.1:27017` database **nexus** | `127.0.0.1:27018` database **placecell** |
+| Redis | `:6379` | host `:6380` |
+| MinIO console | — | http://localhost:9001 (minio / minio12345) |
+
+```bash
+curl http://localhost:8080/health
+```
+
+Nginx (`docs/nginx.conf`) serves the SPA and sends `/v1/resumes` to matching, `/v1/jobs` to catalog, `/v1/auth` to identity, and so on.
 
 ## Environment
 

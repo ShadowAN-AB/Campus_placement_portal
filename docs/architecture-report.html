@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PlaceCell — Architecture Report</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+    :root {
+      --ink: #18181b;
+      --muted: #52525b;
+      --line: #e4e4e7;
+      --paper: #fafaf9;
+      --accent: #047857;
+      --soft: #ecfdf5;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      color: var(--ink);
+      font-size: 11pt;
+      line-height: 1.45;
+    }
+    h1, h2, h3, h4 { font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif; letter-spacing: -0.02em; }
+    h1 { font-size: 26pt; margin: 0 0 8pt; }
+    h2 { font-size: 16pt; margin: 22pt 0 8pt; color: var(--accent); page-break-after: avoid; }
+    h3 { font-size: 12.5pt; margin: 16pt 0 6pt; page-break-after: avoid; }
+    h4 { font-size: 11pt; margin: 12pt 0 4pt; }
+    p { margin: 0 0 8pt; }
+    ul, ol { margin: 0 0 10pt; padding-left: 18pt; }
+    li { margin: 0 0 3pt; }
+    code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; }
+    a { color: var(--accent); text-decoration: none; }
+    .cover { min-height: 240mm; display: flex; flex-direction: column; justify-content: center; }
+    .eyebrow { font-family: "Avenir Next", sans-serif; font-size: 9pt; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+    .lede { font-size: 13pt; color: var(--muted); max-width: 140mm; }
+    .meta { margin-top: 28pt; font-size: 10pt; color: var(--muted); }
+    .chapter { page-break-before: always; }
+    .box {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10pt 12pt;
+      margin: 8pt 0 12pt;
+      page-break-inside: avoid;
+    }
+    .why { background: var(--soft); border-color: #a7f3d0; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 6pt 0 12pt; }
+    th, td { border: 1px solid var(--line); padding: 5pt 7pt; text-align: left; vertical-align: top; }
+    th { background: #f4f4f5; font-family: "Avenir Next", sans-serif; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em; }
+    pre.diagram {
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 8pt;
+      line-height: 1.25;
+      background: #18181b;
+      color: #e4e4e7;
+      padding: 10pt 12pt;
+      border-radius: 8px;
+      white-space: pre;
+      overflow: hidden;
+      page-break-inside: avoid;
+    }
+    .toc a { color: var(--ink); }
+    .toc li { margin: 4pt 0; }
+    .small { font-size: 9.5pt; color: var(--muted); }
+    .footer-note { font-size: 9pt; color: var(--muted); margin-top: 16pt; }
+    .kicker { font-family: "Avenir Next", sans-serif; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .flowwrap { margin: 10pt 0 14pt; page-break-inside: avoid; }
+    .flowwrap svg.flow {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #fafaf9;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .figcap {
+      font-family: "Avenir Next", sans-serif;
+      font-size: 8.5pt;
+      color: var(--muted);
+      margin: 5pt 0 0;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6pt 14pt;
+      font-family: "Avenir Next", sans-serif;
+      font-size: 8.5pt;
+      color: var(--muted);
+      margin: 0 0 10pt;
+    }
+    .legend i {
+      display: inline-block;
+      width: 13pt;
+      height: 9pt;
+      border-radius: 2pt;
+      border: 1px solid var(--ink);
+      margin-right: 5pt;
+      vertical-align: -1pt;
+    }
+    .lg-start { background: #047857; }
+    .lg-step { background: #fff; }
+    .lg-ask { background: #fffbeb; border-color: #d97706 !important; }
+    .lg-store { background: #e4e4e7; }
+    .lg-async { background: #ecfdf5; border-color: #047857 !important; }
+    .lg-stop { background: #18181b; }
+  </style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#18181b"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#047857"/>
+    </marker>
+  </defs>
+</svg>
+
+<section class="cover">
+  <p class="eyebrow">PlaceCell technical report</p>
+  <h1>Architecture of every feature,<br>and of the project as a whole</h1>
+  <p class="lede">A careful walkthrough of what was built, why it is shaped this way, and how each student, recruiter, and admin flow moves through the system. Written so you can reread it later and still know what is going on.</p>
+  <div class="meta">
+    <p>Product: PlaceCell — campus placement portal</p>
+    <p>Code: NestJS feature services + nginx/Node gateway + BullMQ worker + React client + MongoDB + Redis + MinIO</p>
+    <p>Repository: github.com/ShadowAN-AB/Campus_placement_portal</p>
+    <p>Report date: 17 September 2026</p>
+  </div>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Contents</p>
+  <h2>How to read this report</h2>
+  <ol class="toc">
+    <li>Start here — what PlaceCell is, in one page</li>
+    <li>Whole-project architecture <em>(system map + campus loop flowchart)</em></li>
+    <li>How a request travels <em>(flowchart)</em></li>
+    <li>Data model (the collections)</li>
+    <li>Feature: Identity and sessions <em>(flowchart)</em></li>
+    <li>Feature: Student profile and job catalog <em>(flowchart)</em></li>
+    <li>Feature: Apply and hiring desk <em>(flowchart)</em></li>
+    <li>Feature: Matching and resume intelligence <em>(flowchart)</em></li>
+    <li>Feature: Interviews <em>(flowchart)</em></li>
+    <li>Feature: Notifications and inbox <em>(flowchart)</em></li>
+    <li>Feature: Admin analytics <em>(flowchart)</em></li>
+    <li>The worker and the outbox <em>(flowchart)</em></li>
+    <li>What we added recently, commit by commit</li>
+    <li>How to run a demo yourself</li>
+  </ol>
+  <div class="box why">
+    <p><strong>Reading tip.</strong> Each feature chapter uses the same four headings: <em>What you see</em>, <em>Why it exists</em>, <em>How it works</em>, <em>Where to look in the code</em>. A flowchart sits next to the numbered steps. Boxes are work; diamonds are decisions; green boxes are the worker or a successful end.</p>
+  </div>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 1</p>
+  <h2>What PlaceCell is, in one page</h2>
+  <p>PlaceCell is a campus placement workspace. Three kinds of people use it:</p>
+  <ul>
+    <li><strong>Students</strong> keep a profile, browse ranked jobs, apply, upload a resume for AI scoring, and join interviews.</li>
+    <li><strong>Recruiters</strong> post roles, filter applicants, shortlist or reject, edit or close a role, and book interviews.</li>
+    <li><strong>Admins</strong> (the placement cell) approve jobs and read analytics snapshots.</li>
+  </ul>
+  <p>It is <strong>not</strong> a copy of the older Express + Vercel app. It is a new NestJS system: <strong>one OS process per feature</strong> behind a path gateway, a separate worker for slow work, Redis for cache and locks, MongoDB as the source of truth, and MinIO for resume files in Docker.</p>
+  <div class="box">
+    <p class="kicker">The sentence to remember</p>
+    <p>The browser never talks to Mongo or Redis. It only calls <code>/v1/...</code>. Slow or retryable work (resume parse, email, rank refresh) is written to an <em>outbox</em> row, then a worker picks it up. That is why resume upload returns <code>202 Accepted</code> instead of waiting for the LLM.</p>
+  </div>
+  <h3>Demo logins (after seed)</h3>
+  <table>
+    <tr><th>Role</th><th>Email</th><th>Password</th></tr>
+    <tr><td>Student</td><td>student1@spp.dev</td><td>Password@123</td></tr>
+    <tr><td>Recruiter</td><td>recruiter@spp.dev</td><td>Password@123</td></tr>
+    <tr><td>Admin</td><td>admin@spp.dev</td><td>Password@123</td></tr>
+  </table>
+  <p class="small">Local npm: client <code>http://localhost:5173</code>, gateway <code>http://localhost:5050</code> (Vite proxies <code>/v1</code>). Docker Compose: the same UI and API at <code>http://localhost:8080</code>.</p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 2</p>
+  <h2>Whole-project architecture</h2>
+  <p>Think of five layers. Everything we built sits in one of them. The first diagram is the map. The second is the campus hiring loop that uses that map.</p>
+
+<div class="legend">
+  <span><i class="lg-start"></i>Start / success</span>
+  <span><i class="lg-step"></i>Step</span>
+  <span><i class="lg-ask"></i>Decision</span>
+  <span><i class="lg-store"></i>Store (Mongo / Redis / file)</span>
+  <span><i class="lg-async"></i>Worker / async</span>
+  <span><i class="lg-stop"></i>Stop / refuse</span>
+</div>
+
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Whole-project architecture map">
+  
+  <text x="340" y="28" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">PlaceCell — whole-project map</text>
+  <rect x="40" y="48" width="180" height="52" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="130" y="70" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">Browser</text>
+  <text x="130" y="88" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">React 19 + Vite :5173</text>
+  <line x1="220" y1="74" x2="268" y2="74" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="244" y="66" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">/v1 + JWT</text>
+  <rect x="270" y="40" width="220" height="68" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.6"/>
+  <text x="380" y="66" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">NestJS API :5050</text>
+  <text x="380" y="84" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#047857">stateless · can run two copies</text>
+  <rect x="520" y="48" width="130" height="52" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="585" y="70" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">nginx (opt.)</text>
+  <text x="585" y="88" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">7 feature processes</text>
+  <line x1="380" y1="108" x2="380" y2="138" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="40" y="142" width="190" height="64" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
+  <text x="135" y="168" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">MongoDB</text>
+  <text x="135" y="186" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">source of truth</text>
+  <rect x="245" y="142" width="190" height="64" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="168" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">Redis</text>
+  <text x="340" y="186" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">cache · lock · queue · pub</text>
+  <rect x="450" y="142" width="190" height="64" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
+  <text x="545" y="168" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">Disk / MinIO</text>
+  <text x="545" y="186" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">resume files</text>
+  <line x1="135" y1="206" x2="135" y2="226" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="135" y1="226" x2="380" y2="226" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="380" y1="206" x2="380" y2="248" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="230" y="250" width="300" height="56" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.6"/>
+  <text x="380" y="274" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">Outbox row + BullMQ queue</text>
+  <text x="380" y="292" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#047857">placecell-events</text>
+  <line x1="380" y1="306" x2="380" y2="334" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="336" width="360" height="64" rx="8" fill="#047857" stroke="#047857"/>
+  <text x="380" y="362" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#fff">Worker  ·  node dist/worker.js</text>
+  <text x="380" y="382" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#d1fae5">parse resume · score · mail · ranks · analytics</text>
+
+</svg>
+<p class="figcap">Figure 1. Whole-project map. The browser only calls /v1. Slow work leaves the API through the outbox.</p>
+</div>
+
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Campus hiring loop flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Campus loop — one hiring story</text>
+  <rect x="250" y="42" width="180" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="65" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Student signs in</text>
+  <line x1="340" y1="78" x2="340" y2="100" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="230" y="102" width="220" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="127" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Browse ranked jobs</text>
+  <line x1="340" y1="142" x2="340" y2="164" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="230" y="166" width="220" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="191" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Apply (idempotent)</text>
+  <line x1="340" y1="206" x2="340" y2="228" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="230" y="230" width="220" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="255" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Recruiter reviews desk</text>
+  <line x1="340" y1="270" x2="340" y2="300" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,300 L410,338 L340,376 L270,338 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="334" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Shortlist?</text>
+  <text x="340" y="350" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#92400e">or reject</text>
+  <line x1="270" y1="338" x2="120" y2="338" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="190" y="328" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">no</text>
+  <rect x="30" y="318" width="90" height="40" rx="8" fill="#18181b"/>
+  <text x="75" y="343" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" fill="#fff">Rejected</text>
+  <line x1="410" y1="338" x2="520" y2="338" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="460" y="328" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <rect x="522" y="318" width="130" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="587" y="343" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Book interview</text>
+  <line x1="587" y1="358" x2="587" y2="400" stroke="#18181b" stroke-width="1.4"/>
+  <line x1="587" y1="400" x2="340" y2="400" stroke="#18181b" stroke-width="1.4"/>
+  <line x1="340" y1="376" x2="340" y2="418" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="230" y="420" width="220" height="40" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.5"/>
+  <text x="340" y="445" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Join / .ics / inbox</text>
+  <line x1="340" y1="460" x2="340" y2="482" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="230" y="484" width="220" height="40" rx="18" fill="#047857"/>
+  <text x="340" y="509" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Admin snapshot</text>
+  <rect x="30" y="102" width="170" height="104" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.4"/>
+  <text x="115" y="128" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600" fill="#047857">Side path</text>
+  <text x="115" y="148" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">Upload resume</text>
+  <text x="115" y="166" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">Worker scores</text>
+  <text x="115" y="184" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">Redis ranks refresh</text>
+  <line x1="200" y1="154" x2="228" y2="122" stroke="#047857" stroke-width="1.2" marker-end="url(#arrow-green)"/>
+
+</svg>
+<p class="figcap">Figure 2. Whole-project flowchart. Solid path is hiring. The green box on the left is resume scoring, which only refreshes ranks.</p>
+</div>
+
+  <h3>What each box is responsible for</h3>
+  <table>
+    <tr><th>Piece</th><th>Job</th><th>If it dies</th></tr>
+    <tr><td>Client</td><td>Screens and forms. No business rules that matter.</td><td>Nobody can click. Data is safe.</td></tr>
+    <tr><td>Gateway</td><td>Path router (Node :5050 locally, nginx :8080 in Docker).</td><td>Nothing is reachable. Feature processes may still be healthy.</td></tr>
+    <tr><td>Feature services</td><td>One Nest process per prefix: identity, catalog, applications, matching, interviews, notifications, analytics.</td><td>That prefix 503s. The rest of the site stays up. The client shows a service banner.</td></tr>
+    <tr><td>Worker</td><td>Slow / retryable side effects.</td><td>API still accepts uploads. Outbox sweeper republishes later.</td></tr>
+    <tr><td>MongoDB</td><td>Source of truth (shared; process isolation, not DB-per-service).</td><td>API /ready fails. Nothing should pretend to succeed.</td></tr>
+    <tr><td>Redis</td><td>Cache, locks, queue, notify channel.</td><td>Job list falls back to Mongo. Interview lock is skipped. Queue waits for sweeper.</td></tr>
+    <tr><td>MinIO / disk</td><td>Resume files. Disk locally, S3-compatible MinIO in Compose.</td><td>Upload fails. Scoring of already-stored files can still run.</td></tr>
+  </table>
+  <h3>One process per feature (microservices by path)</h3>
+  <p>There is one Node codebase. At runtime, <code>SERVICE=identity|catalog|…</code> loads only that Nest module. JWT verify is shared (<code>AuthCoreModule</code>). Mongo is still one cluster — isolation is process-level, so if matching dies, jobs and apply still work.</p>
+  <table>
+    <tr><th>Process</th><th>Port</th><th>Owns</th></tr>
+    <tr><td><code>identity</code></td><td>5051</td><td>Signup, login, refresh, password reset, JWT</td></tr>
+    <tr><td><code>catalog</code></td><td>5052</td><td>Student profile, jobs, approve / edit / close</td></tr>
+    <tr><td><code>applications</code></td><td>5053</td><td>Apply, list mine, recruiter filters, status changes</td></tr>
+    <tr><td><code>matching</code></td><td>5054</td><td>Resume upload, fit scores, AI chat</td></tr>
+    <tr><td><code>interviews</code></td><td>5055</td><td>Schedule, reschedule, cancel, .ics calendar</td></tr>
+    <tr><td><code>notifications</code></td><td>5056</td><td>Inbox rows + Redis publish</td></tr>
+    <tr><td><code>analytics</code></td><td>5057</td><td>Admin snapshot (not a live scan)</td></tr>
+    <tr><td><code>worker</code></td><td>—</td><td>LLM, email, ranking, analytics rollup</td></tr>
+    <tr><td><code>infra</code> (library)</td><td>—</td><td>Redis, mail, LLM, storage, outbox, queue</td></tr>
+  </table>
+  <div class="box why">
+    <p><strong>Why split processes, not databases?</strong> The assignment needed “if a feature goes down the rest of the site still works.” Path-based services give that without seven Mongo clusters. The UI uses <code>apiTry()</code> so a 503 does not blank the page.</p>
+  </div>
+  <h3>Docker Compose layout</h3>
+  <p><code>docker-compose.yml</code> starts Mongo, Redis, MinIO (resume bucket), the seven feature containers, the worker, and nginx which both serves the SPA and routes <code>/v1/…</code> by prefix. Host ports: app <code>8080</code>, Mongo <code>27018</code> (database <code>placecell</code>), Redis <code>6380</code>, MinIO console <code>9001</code>. Homebrew Mongo on <code>27017</code> / database <code>nexus</code> is left alone so Compass still shows local npm data.</p>
+  <p>Commands: <code>npm run docker:up</code>, then <code>npm run docker:seed</code>. Open <code>http://localhost:8080</code>.</p>
+  <h3>Consistency choices (the CAP note from your study pages)</h3>
+  <ul>
+    <li><strong>Apply and interview booking are CP-ish.</strong> Unique index on student+job. Idempotency key. Redis <code>SET NX</code> lock on an interview slot. We would rather fail a double-book than invent a second interview.</li>
+    <li><strong>Job feed and inbox are AP-ish.</strong> Rank cache lives 1 hour. A slightly stale score is acceptable. Inbox can poll.</li>
+  </ul>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 3</p>
+  <h2>How a request travels</h2>
+  <p>This is the path of almost every click.</p>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Request path flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">How one click becomes JSON</text>
+  <rect x="250" y="42" width="180" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="65" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">User clicks</text>
+  <line x1="340" y1="78" x2="340" y2="98" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="215" y="100" width="250" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="125" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">api("/v1/…") + Bearer token</text>
+  <line x1="340" y1="140" x2="340" y2="168" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,170 L430,208 L340,246 L250,208 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="204" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Access JWT</text>
+  <text x="340" y="220" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">still valid?</text>
+  <line x1="250" y1="208" x2="110" y2="208" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="175" y="198" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">expired</text>
+  <rect x="20" y="168" width="90" height="80" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="65" y="198" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">POST refresh</text>
+  <text x="65" y="214" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">cookie</text>
+  <text x="65" y="230" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">retry once</text>
+  <line x1="65" y1="248" x2="65" y2="300" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="65" y1="300" x2="340" y2="300" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="430" y1="208" x2="560" y2="208" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="490" y="198" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <rect x="562" y="188" width="100" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="612" y="213" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Throttle</text>
+  <line x1="612" y1="228" x2="612" y2="268" stroke="#18181b" stroke-width="1.4"/>
+  <line x1="612" y1="268" x2="340" y2="268" stroke="#18181b" stroke-width="1.4"/>
+  <line x1="340" y1="246" x2="340" y2="300" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="215" y="302" width="250" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="327" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">JwtAuthGuard + RolesGuard</text>
+  <line x1="340" y1="342" x2="340" y2="362" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="215" y="364" width="250" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="389" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Service → Mongo / Redis</text>
+  <line x1="340" y1="404" x2="340" y2="424" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,426 L420,458 L340,490 L260,458 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="454" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Need follow-up?</text>
+  <text x="340" y="470" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">mail / parse / rank</text>
+  <line x1="260" y1="458" x2="90" y2="458" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="170" y="448" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">no</text>
+  <line x1="420" y1="458" x2="560" y2="458" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="485" y="448" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <rect x="562" y="438" width="100" height="40" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.5"/>
+  <text x="612" y="463" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">outbox.emit</text>
+  <rect x="30" y="508" width="620" height="40" rx="18" fill="#047857"/>
+  <text x="340" y="533" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">JSON back to the page · UI updates</text>
+  <line x1="90" y1="458" x2="90" y2="508" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="612" y1="478" x2="612" y2="508" stroke="#047857" stroke-width="1.2"/>
+
+</svg>
+<p class="figcap">Figure 3. Request flowchart. Refresh happens only when the 15-minute access token is stale.</p>
+</div>
+
+  <ol>
+    <li>React calls <code>api("/v1/...")</code> in <code>client/src/utils/api.ts</code>.</li>
+    <li>That helper attaches <code>Authorization: Bearer …</code> from <code>sessionStorage.placecell_access</code>.</li>
+    <li>If the access token expired (15 minutes), it posts <code>/v1/auth/refresh</code> with the httpOnly cookie, stores the new access token, and retries once.</li>
+    <li>Nest global <code>ThrottlerGuard</code> allows 120 calls / minute / client (stricter on AI ask).</li>
+    <li><code>JwtAuthGuard</code> reads the bearer token. <code>RolesGuard</code> checks <code>@Roles("student")</code> etc.</li>
+    <li>The service talks to Mongo (and sometimes Redis). Writes that need follow-up call <code>outbox.emit(eventType, payload)</code>.</li>
+    <li>JSON comes back. The page updates.</li>
+  </ol>
+  <h3>Client routes (what URL opens which screen)</h3>
+  <table>
+    <tr><th>URL</th><th>Who</th><th>Page</th></tr>
+    <tr><td><code>/auth</code></td><td>Anyone</td><td>Sign in / sign up</td></tr>
+    <tr><td><code>/forgot-password</code>, <code>/reset-password</code></td><td>Anyone</td><td>Reset flow</td></tr>
+    <tr><td><code>/dashboard/student</code></td><td>Student</td><td>Jobs, applications, insights, upcoming interviews</td></tr>
+    <tr><td><code>/resume-intelligence</code></td><td>Student</td><td>Upload, company fit, job fit, chat</td></tr>
+    <tr><td><code>/dashboard/recruiter</code></td><td>Recruiter</td><td>Hiring desk</td></tr>
+    <tr><td><code>/dashboard/admin</code></td><td>Admin</td><td>Approvals + analytics</td></tr>
+    <tr><td><code>/jobs/:jobId</code></td><td>Signed-in</td><td>Job detail (apply / edit / close)</td></tr>
+    <tr><td><code>/interviews</code></td><td>Signed-in</td><td>Interview board</td></tr>
+  </table>
+  <p><code>App.tsx</code> <code>Guard</code> sends you to <code>/auth</code> if there is no user, or home if you open the wrong role’s dashboard.</p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 4</p>
+  <h2>Data model — the collections</h2>
+  <p>MongoDB: local npm uses database <code>nexus</code> on <code>127.0.0.1:27017</code>. Docker Compose uses database <code>placecell</code> on <code>127.0.0.1:27018</code>. Passwords are stored as bcrypt <code>passwordHash</code> on the <code>users</code> collection — not plaintext, and not in a <code>login_info</code> collection.</p>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Data model ownership">
+  
+  <text x="340" y="24" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Who writes which collections</text>
+  <rect x="20" y="44" width="200" height="200" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="120" y="68" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="700">Identity</text>
+  <text x="120" y="90" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">users</text>
+  <text x="120" y="108" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">refreshsessions</text>
+  <text x="120" y="126" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">loginevents</text>
+  <text x="120" y="144" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">passwordresettokens</text>
+  <rect x="240" y="44" width="200" height="200" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="68" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="700">Marketplace</text>
+  <text x="340" y="90" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">studentprofiles</text>
+  <text x="340" y="108" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">jobs</text>
+  <text x="340" y="126" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">applications</text>
+  <text x="340" y="144" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">matchscores</text>
+  <text x="340" y="162" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">interviews</text>
+  <rect x="460" y="44" width="200" height="200" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="560" y="68" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="700">Async + AI</text>
+  <text x="560" y="90" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">resumeuploads</text>
+  <text x="560" y="108" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">resumeanalyses</text>
+  <text x="560" y="126" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">chatmessages</text>
+  <text x="560" y="144" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">notifications</text>
+  <text x="560" y="162" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">analyticssnapshots</text>
+  <text x="560" y="180" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">outboxevents</text>
+  <text x="340" y="268" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">Arrows in the other diagrams always land in one of these boxes.</text>
+
+</svg>
+<p class="figcap">Figure 4. Collections grouped by the module that owns them.</p>
+</div>
+
+  <table>
+    <tr><th>Collection</th><th>One row means</th><th>Important fields</th></tr>
+    <tr><td>users</td><td>A person</td><td>name, email, passwordHash, role</td></tr>
+    <tr><td>refreshsessions</td><td>A refresh cookie</td><td>userId, tokenHash, expiresAt, revokedAt</td></tr>
+    <tr><td>loginevents</td><td>An audit of a login</td><td>userId, ip, userAgent</td></tr>
+    <tr><td>passwordresettokens</td><td>A one-hour reset</td><td>userId, tokenHash, used</td></tr>
+    <tr><td>studentprofiles</td><td>A student’s CV-lite</td><td>userId, skills, bio, expectedSalary, yearsOfExperience, education, projects</td></tr>
+    <tr><td>jobs</td><td>A role</td><td>title, company, requiredSkills, salaries, minExperience, approved, status, postedBy</td></tr>
+    <tr><td>applications</td><td>A student applied to a job</td><td>studentId, jobId, status, matchScore, idempotencyKey</td></tr>
+    <tr><td>matchscores</td><td>Cached score student↔job</td><td>studentId, jobId, score, matched/missing skills</td></tr>
+    <tr><td>resumeuploads</td><td>A file the student sent</td><td>userId, filename, filePath, version, status, error</td></tr>
+    <tr><td>resumeanalyses</td><td>Extract + scores for one file</td><td>extractedData, jobFitScores, companyFitScores</td></tr>
+    <tr><td>chatmessages</td><td>One AI chat line</td><td>userId, role, text</td></tr>
+    <tr><td>interviews</td><td>A booked slot</td><td>applicationId, when, duration, meetingType/link, status</td></tr>
+    <tr><td>notifications</td><td>An inbox row</td><td>userId, title, body, read, link</td></tr>
+    <tr><td>analyticssnapshots</td><td>One cached admin dashboard</td><td>key “latest”, data, computedAt</td></tr>
+    <tr><td>outboxevents</td><td>Work the worker must do</td><td>type, payload, processedAt</td></tr>
+  </table>
+  <div class="box">
+    <p class="kicker">ObjectId vs string (a bug we actually hit)</p>
+    <p>Nest <code>@Prop({ type: Types.ObjectId })</code> does <em>not</em> always cast. Early writes stored <code>studentId</code> as a string. Queries with a real ObjectId then returned empty lists — “Already applied” but the student table was blank. We now write with <code>oid()</code>, query with <code>idMatch()</code> (string <em>or</em> ObjectId), and use <code>Schema.Types.ObjectId</code> on refs.</p>
+  </div>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 5</p>
+  <h2>Feature: Identity and sessions</h2>
+  <h3>What you see</h3>
+  <p>Sign in, sign up (student / recruiter / admin+code), forgot password, reset password. After login you land on the dashboard for your role.</p>
+  <h3>Why it exists</h3>
+  <p>Every other feature is permission-gated. A student must not list another student’s applications. An admin signup without the campus code must fail.</p>
+  <h3>How it works</h3>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 510" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Identity flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Identity — sign up, sign in, reset</text>
+  <rect x="250" y="42" width="180" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="65" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Auth page</text>
+  <line x1="340" y1="78" x2="340" y2="104" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,106 L430,144 L340,182 L250,144 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="140" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Which action?</text>
+  <text x="340" y="156" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">login / signup / forgot</text>
+  <line x1="250" y1="144" x2="90" y2="144" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="165" y="134" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">signup</text>
+  <rect x="20" y="124" width="140" height="80" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="90" y="150" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">bcrypt hash</text>
+  <text x="90" y="168" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">admin needs code</text>
+  <text x="90" y="184" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">empty StudentProfile</text>
+  <line x1="430" y1="144" x2="590" y2="144" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="505" y="134" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">forgot</text>
+  <rect x="520" y="116" width="140" height="56" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="590" y="140" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Always “ok”</text>
+  <text x="590" y="156" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">hashed 1h token</text>
+  <line x1="590" y1="172" x2="590" y2="210" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="520" y="212" width="140" height="40" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.4"/>
+  <text x="590" y="237" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Email reset link</text>
+  <line x1="340" y1="182" x2="340" y2="210" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="360" y="200" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">login</text>
+  <rect x="215" y="212" width="250" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="237" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">bcrypt compare password</text>
+  <line x1="340" y1="252" x2="340" y2="280" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,282 L410,316 L340,350 L270,316 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="320" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Match?</text>
+  <line x1="270" y1="316" x2="90" y2="316" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="175" y="306" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">no</text>
+  <rect x="20" y="296" width="70" height="40" rx="8" fill="#18181b"/>
+  <text x="55" y="321" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" fill="#fff">401</text>
+  <line x1="340" y1="350" x2="340" y2="378" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="190" y="380" width="300" height="56" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="404" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Access JWT 15m + refresh cookie 7d</text>
+  <text x="340" y="422" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">LoginEvent · rotate on refresh</text>
+  <line x1="340" y1="436" x2="340" y2="458" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="215" y="460" width="250" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="483" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Role dashboard</text>
+
+</svg>
+<p class="figcap">Figure 5. Identity flowchart. Forgot-password always looks successful so emails cannot be probed.</p>
+</div>
+
+  <ol>
+    <li>Password is hashed with bcrypt (cost 10). We never store the raw password.</li>
+    <li>Login writes a <code>LoginEvent</code> (who, when, IP, user agent).</li>
+    <li>We issue a short <strong>access JWT</strong> (15 minutes, kept in sessionStorage) and a longer <strong>refresh token</strong> (7 days, httpOnly cookie, stored hashed in Mongo).</li>
+    <li>Refresh is rotation: the old session row is revoked, a new cookie is set. Stolen cookies can be revoked.</li>
+    <li>Forgot-password creates a SHA-256 hashed token, 1 hour TTL, single use. The HTTP response is always success-shaped so attackers cannot probe which emails exist.</li>
+    <li>Admin signup requires <code>ADMIN_SIGNUP_CODE</code>.</li>
+    <li>Creating a student also creates an empty <code>StudentProfile</code>.</li>
+  </ol>
+  <h3>Where to look</h3>
+  <p><code>server/src/identity/</code> · <code>client/src/pages/AuthPage.tsx</code> · <code>client/src/context/AuthContext.tsx</code></p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 6</p>
+  <h2>Feature: Student profile and job catalog</h2>
+  <h3>What you see</h3>
+  <p>On the student home: skills, expected CTC, years of experience, bio, Save, Auto-fill. Below that, recommended roles with a match percent. Recruiters post a job (needs admin approval). Admins approve from their dashboard. Recruiters can later edit fields, close, or reopen.</p>
+  <h3>Why it exists</h3>
+  <p>Matching needs a profile. Students must only see <em>approved + active</em> jobs. A recruiter must not silently publish to the campus feed — the placement cell approves first.</p>
+  <h3>How job listing works</h3>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 508" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Job catalog flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Jobs — post, approve, list, close</text>
+  <rect x="40" y="48" width="180" height="40" rx="18" fill="#047857"/>
+  <text x="130" y="73" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Recruiter posts</text>
+  <line x1="220" y1="68" x2="268" y2="68" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="270" y="48" width="200" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="370" y="73" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">approved: false</text>
+  <line x1="470" y1="68" x2="518" y2="68" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M590,48 L660,88 L590,128 L520,88 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="590" y="84" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Admin</text>
+  <text x="590" y="100" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">approves?</text>
+  <line x1="590" y1="128" x2="590" y2="168" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="608" y="152" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <rect x="500" y="170" width="160" height="40" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.5"/>
+  <text x="580" y="195" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Students can see it</text>
+  <line x1="500" y1="190" x2="370" y2="190" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="40" y="230" width="180" height="40" rx="18" fill="#047857"/>
+  <text x="130" y="255" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Student GET /jobs</text>
+  <line x1="220" y1="250" x2="300" y2="250" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M370,212 L460,250 L370,288 L280,250 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="370" y="246" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Redis rank</text>
+  <text x="370" y="262" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10">jobs:rank:user warm?</text>
+  <line x1="280" y1="250" x2="280" y2="330" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="248" y="310" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">cold</text>
+  <rect x="190" y="332" width="180" height="40" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
+  <text x="280" y="357" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Mongo unranked list</text>
+  <line x1="460" y1="250" x2="560" y2="250" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="505" y="240" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">warm</text>
+  <rect x="500" y="230" width="160" height="40" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.5"/>
+  <text x="580" y="255" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Sorted + matchScore</text>
+  <rect x="40" y="400" width="600" height="88" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="424" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">Later, same poster</text>
+  <text x="150" y="456" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">PUT edit fields</text>
+  <text x="340" y="456" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">DELETE → status closed</text>
+  <text x="530" y="456" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">POST reopen → active</text>
+  <text x="340" y="474" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">Closed jobs stay in Mongo. Students just cannot apply.</text>
+
+</svg>
+<p class="figcap">Figure 6. Catalog flowchart. Students never see a job until an admin approves it. Redis is a speed-up, not the source of truth.</p>
+</div>
+
+  <ol>
+    <li>Recruiter <code>POST /v1/jobs</code> → <code>approved: false</code>, <code>status: "active"</code>.</li>
+    <li>Admin <code>POST /v1/admin/jobs/:id/approve</code> → students can see it. Event <code>job.approved</code> notifies the recruiter.</li>
+    <li>Student <code>GET /v1/jobs</code> first looks in Redis sorted set <code>jobs:rank:&lt;userId&gt;</code>. If that cache is warm, jobs come back already sorted with <code>matchScore</code>.</li>
+    <li>If the cache is empty, Mongo returns the approved active list (unranked until the worker runs).</li>
+    <li>A missing <code>?page=</code> used to become <code>NaN</code> and slice the ranked list to nothing. We now default page to 1. That is why jobs vanished after ranks warmed, then came back.</li>
+  </ol>
+  <h3>How edit / close / reopen works</h3>
+  <ul>
+    <li>Edit: <code>PUT /v1/jobs/:id</code> — only the poster, all listing fields.</li>
+    <li>Close: <code>DELETE /v1/jobs/:id</code> — sets <code>status: "closed"</code>. Students can no longer apply. The row is not deleted.</li>
+    <li>Reopen: <code>POST /v1/jobs/:id/reopen</code> — back to <code>active</code>.</li>
+  </ul>
+  <h3>Where to look</h3>
+  <p><code>server/src/catalog/</code> · <code>client/src/pages/StudentDashboard.tsx</code> · <code>RecruiterDashboard.tsx</code> · <code>JobDetailPage.tsx</code> · <code>AdminDashboard.tsx</code></p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 7</p>
+  <h2>Feature: Apply and the hiring desk</h2>
+  <h3>What you see</h3>
+  <p><strong>Student:</strong> Apply on a card or job detail. The button becomes Applied. The applications table shows role, company, status, match %, date, pagination. KPIs count applications and shortlist/interview.</p>
+  <p><strong>Recruiter:</strong> Job pills with applicant counts. Filters (name, status, min match, skill, sort). Per-row Shortlist / Schedule / Reject. Bulk actions. KPIs for roles and applicants.</p>
+  <h3>Why it exists</h3>
+  <p>This is the marketplace. Double-apply must be impossible. Recruiters need the same filters the older portal had.</p>
+  <h3>How apply works (read slowly)</h3>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 490" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Apply and hiring desk flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Apply — student click to recruiter desk</text>
+  <rect x="40" y="46" width="160" height="36" rx="18" fill="#047857"/>
+  <text x="120" y="69" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">POST /applications</text>
+  <line x1="200" y1="64" x2="248" y2="64" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M310,36 L390,64 L310,92 L230,64 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="310" y="60" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Job ok?</text>
+  <text x="310" y="74" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9">approved + active</text>
+  <line x1="310" y1="92" x2="310" y2="118" stroke="#18181b" stroke-width="1.2"/>
+  <text x="288" y="108" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">no</text>
+  <rect x="265" y="118" width="90" height="28" rx="6" fill="#18181b"/>
+  <text x="310" y="137" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#fff">404</text>
+  <line x1="390" y1="64" x2="470" y2="64" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="425" y="54" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <path d="M540,36 L640,64 L540,92 L440,64 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="540" y="60" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Already applied</text>
+  <text x="540" y="74" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9">or idempotency key?</text>
+  <line x1="640" y1="64" x2="640" y2="118" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="652" y="96" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <rect x="575" y="120" width="90" height="28" rx="6" fill="#047857"/>
+  <text x="620" y="139" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#fff">Replay row</text>
+  <line x1="540" y1="92" x2="540" y2="168" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="510" y="140" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">new</text>
+  <rect x="400" y="170" width="280" height="48" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="540" y="190" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Score 70 / 20 / 10 vs profile</text>
+  <text x="540" y="206" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">insert pending + MatchScore</text>
+  <line x1="540" y1="218" x2="540" y2="248" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="400" y="250" width="280" height="40" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.5"/>
+  <text x="540" y="275" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">application.applied → worker</text>
+  <line x1="40" y1="320" x2="640" y2="320" stroke="#e4e4e7" stroke-width="1"/>
+  <text x="40" y="340" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#047857">Hiring desk</text>
+  <rect x="40" y="352" width="200" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="140" y="377" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">GET job applications</text>
+  <line x1="240" y1="372" x2="288" y2="372" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="290" y="352" width="170" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="375" y="377" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Filter / sort / page</text>
+  <line x1="460" y1="372" x2="508" y2="372" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M575,340 L655,372 L575,404 L495,372 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="575" y="368" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" font-weight="600">Action?</text>
+  <text x="575" y="382" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9">shortlist / reject / book</text>
+  <rect x="40" y="430" width="600" height="40" rx="18" fill="#047857"/>
+  <text x="340" y="455" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">One status field · student table + inbox both read it</text>
+
+</svg>
+<p class="figcap">Figure 7. Apply and hiring-desk flowchart. Replay on idempotency is a success, not an error.</p>
+</div>
+
+  <ol>
+    <li>Student <code>POST /v1/applications</code> with <code>{ jobId }</code> and header <code>Idempotency-Key: job-&lt;id&gt;</code>.</li>
+    <li>Job must exist, be approved, and be active. Otherwise 404.</li>
+    <li>If that idempotency key already exists, we return the old row (replay). Same if student+job already exists. The UI treats that as success and reloads.</li>
+    <li>Otherwise we score with <code>calculateMatchScore</code> (skills 70 / experience 20 / salary 10) against the profile, insert the application as <code>pending</code>, upsert a <code>MatchScore</code>, emit <code>application.applied</code>.</li>
+    <li>Worker notifies the recruiter and refreshes Redis ranks.</li>
+  </ol>
+  <h3>How recruiter listing works</h3>
+  <p><code>GET /v1/applications/job/:jobId</code> is the hiring table. It populates student name/email, joins <code>StudentProfile</code> for skill filter, then search / status / min match / sort / page in memory (campus-sized lists).</p>
+  <p>Status changes: <code>PUT /v1/applications/:id/status</code> or <code>POST /v1/applications/bulk-status</code>. Allowed values: pending, shortlisted, rejected, interview. Scheduling an interview also sets status to <code>interview</code>.</p>
+  <div class="box why">
+    <p><strong>Statuses are a pipeline, not a chat.</strong> pending → shortlisted or rejected. Schedule moves the row to interview. The student table and inbox both read this one field. There is no second “hidden” status.</p>
+  </div>
+  <h3>Where to look</h3>
+  <p><code>server/src/applications/</code> · student and recruiter dashboards · <code>ScheduleInterviewModal.tsx</code></p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 8</p>
+  <h2>Feature: Matching and resume intelligence</h2>
+  <h3>What you see</h3>
+  <p>Upload PDF/DOCX. Status walks: queued → parsing → scoring → analyzed (or failed with an error). Version chips. Extracted skills. Company-fit cards with five factor bars. Job-fit list. Compare last two versions. Ask-the-assistant + Clear chat.</p>
+  <p>Before any resume is analyzed, the same page still shows company/job scores from the live profile (source = profile). After analysis, source = resume and bars appear.</p>
+  <h3>Two scoring formulas</h3>
+  <table>
+    <tr><th></th><th>Live apply / job rank</th><th>Resume AI (enhanced)</th></tr>
+    <tr><td>Skills</td><td>70%</td><td>55%</td></tr>
+    <tr><td>Experience</td><td>20%</td><td>20%</td></tr>
+    <tr><td>Salary overlap</td><td>10%</td><td>10%</td></tr>
+    <tr><td>Education</td><td>—</td><td>10%</td></tr>
+    <tr><td>Projects</td><td>—</td><td>5%</td></tr>
+    <tr><td>Function</td><td><code>calculateMatchScore</code></td><td><code>calculateEnhancedMatchScore</code></td></tr>
+  </table>
+  <p>Skill score = matched required skills / required skills. Experience is 100 if the student meets min years, otherwise a fraction. Salary is 100 if expected CTC sits inside the band.</p>
+  <h3>How upload works</h3>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 548" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Resume intelligence flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Resume intelligence — 202, then the worker</text>
+  <rect x="230" y="42" width="220" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="65" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">POST /v1/resumes</text>
+  <line x1="340" y1="78" x2="340" y2="98" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="100" width="280" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="125" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Store file · 202 { uploaded }</text>
+  <line x1="340" y1="140" x2="340" y2="160" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="162" width="280" height="36" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.5"/>
+  <text x="340" y="185" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">outbox  resume.uploaded</text>
+  <line x1="340" y1="198" x2="340" y2="220" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="222" width="280" height="36" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="245" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Parse PDF / DOCX  →  text</text>
+  <line x1="340" y1="258" x2="340" y2="286" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,288 L430,326 L340,364 L250,326 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="322" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">LLM up?</text>
+  <line x1="250" y1="326" x2="90" y2="326" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="165" y="316" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">no</text>
+  <rect x="20" y="306" width="140" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="90" y="331" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Regex skill bank</text>
+  <line x1="430" y1="326" x2="590" y2="326" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="505" y="316" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <rect x="520" y="306" width="140" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="590" y="331" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">JSON extract 0.1</text>
+  <line x1="90" y1="346" x2="90" y2="400" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="590" y1="346" x2="590" y2="400" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="90" y1="400" x2="590" y2="400" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="340" y1="364" x2="340" y2="418" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="170" y="420" width="340" height="56" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="444" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Enhanced score every active job</text>
+  <text x="340" y="462" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">55 / 20 / 10 / 10 / 5 · company fit = best per firm</text>
+  <line x1="340" y1="476" x2="340" y2="496" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="170" y="498" width="340" height="40" rx="18" fill="#047857"/>
+  <text x="340" y="523" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Merge profile · notify · refresh ranks</text>
+
+</svg>
+<p class="figcap">Figure 8. Resume flowchart. The API returns 202 immediately. Everything after the green outbox box is the worker.</p>
+</div>
+
+  <ol>
+    <li><code>POST /v1/resumes</code> (multipart field name <code>resume</code>). Only PDF or DOCX, 10 MB. Returns <strong>202</strong> with <code>{ id, status: "uploaded", version }</code>.</li>
+    <li>File is stored under <code>&lt;userId&gt;/&lt;timestamp&gt;-filename</code> (disk or S3/MinIO).</li>
+    <li>Outbox event <code>resume.uploaded</code>.</li>
+    <li>Worker: status parsing → extract text (pdf-parse or mammoth) → LLM JSON extract at temperature 0.1, or regex skill bank if the LLM is down → status extracted.</li>
+    <li>Score every approved active job with the enhanced formula. Company fit = best job per company. Save <code>ResumeAnalysis</code>. Merge skills/education/projects into the profile. Status analyzed. Notify the student. Recompute Redis ranks.</li>
+  </ol>
+  <p>Hand-made broken PDFs fail with a parse error (we saw <code>bad XRef entry</code>). A real Word .docx works. Ollama health is shown as “AI ready” vs “AI fallback”.</p>
+  <h3>AI chat</h3>
+  <p><code>POST /v1/ai/ask</code> sends the latest extracted resume + top job fits as context. The model is told to answer only from that. Rate limited (20/day). <code>DELETE /v1/ai/chat</code> clears history.</p>
+  <h3>Where to look</h3>
+  <p><code>server/src/matching/</code> · <code>match-algorithm.ts</code> · <code>resume-parser.ts</code> · worker <code>handleResume</code> · <code>client/src/pages/ResumeIntelligence.tsx</code></p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 9</p>
+  <h2>Feature: Interviews</h2>
+  <h3>What you see</h3>
+  <p>Recruiter opens Schedule on an applicant: date, time, duration, video/online/in-person, meeting link, location, notes. The hiring desk and student home show upcoming interviews. Join opens the link. Add to calendar downloads an <code>.ics</code> file. Recruiters can reschedule, cancel, or complete on <code>/interviews</code>.</p>
+  <h3>Why it exists</h3>
+  <p>Campus drives fail when two interviews overlap for the same student, or when nobody gets a calendar file.</p>
+  <h3>How booking works</h3>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 506" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interview booking flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Interview booking</text>
+  <rect x="230" y="42" width="220" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="65" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">POST /v1/interviews</text>
+  <line x1="340" y1="78" x2="340" y2="104" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,106 L430,140 L340,174 L250,140 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="136" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Owner + future?</text>
+  <line x1="250" y1="140" x2="80" y2="140" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="160" y="130" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">no</text>
+  <rect x="20" y="120" width="60" height="40" rx="8" fill="#18181b"/>
+  <text x="50" y="145" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" fill="#fff">403</text>
+  <line x1="340" y1="174" x2="340" y2="200" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="202" width="280" height="40" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="227" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Redis SET NX  15s lock</text>
+  <line x1="340" y1="242" x2="340" y2="268" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,270 L440,308 L340,346 L240,308 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="304" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Overlap or</text>
+  <text x="340" y="320" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">already booked?</text>
+  <line x1="240" y1="308" x2="80" y2="308" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="155" y="298" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <rect x="20" y="288" width="60" height="40" rx="8" fill="#18181b"/>
+  <text x="50" y="313" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" fill="#fff">409</text>
+  <line x1="340" y1="346" x2="340" y2="372" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="180" y="374" width="320" height="48" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="394" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Create interview · status = interview</text>
+  <text x="340" y="410" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">unique applicationId</text>
+  <line x1="340" y1="422" x2="340" y2="444" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="180" y="446" width="320" height="40" rx="18" fill="#047857"/>
+  <text x="340" y="471" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Inbox + optional email with .ics</text>
+
+</svg>
+<p class="figcap">Figure 9. Interview flowchart. We fail a double-book rather than invent a second slot.</p>
+</div>
+
+  <ol>
+    <li><code>POST /v1/interviews</code> with <code>applicationId</code> and <code>scheduledAt</code> (must be in the future).</li>
+    <li>Only the job’s recruiter can book.</li>
+    <li>Redis lock <code>lock:interview:&lt;studentId&gt;:&lt;isoTime&gt;</code> for 15 seconds so two clicks cannot race.</li>
+    <li>We also scan that student’s other scheduled interviews and reject overlapping windows (duration vs duration).</li>
+    <li>One interview per application (unique <code>applicationId</code>).</li>
+    <li>Application status becomes <code>interview</code>.</li>
+    <li>Event <code>interview.scheduled</code> → inbox for student and recruiter + optional email with ICS attached.</li>
+  </ol>
+  <p>Calendar download uses a short JWT in the query string so the <code>.ics</code> link works from a mail client without the SPA session.</p>
+  <h3>Where to look</h3>
+  <p><code>server/src/interviews/</code> · <code>conflict.ts</code> · <code>ics.ts</code> · <code>ScheduleInterviewModal.tsx</code> · <code>InterviewsPage.tsx</code></p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 10</p>
+  <h2>Feature: Notifications and inbox</h2>
+  <h3>What you see</h3>
+  <p>Bell in the shell. Unread count. Each row has a title, body, and link (student dashboard, recruiter desk, interviews, resume page). Mark all.</p>
+  <h3>How it works</h3>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 406" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Notifications flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Notifications — write once, two readers</text>
+  <rect x="200" y="46" width="280" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="69" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Domain event (apply, status…)</text>
+  <line x1="340" y1="82" x2="340" y2="104" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="106" width="280" height="36" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="129" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">notify(userId, title, body, link)</text>
+  <line x1="340" y1="142" x2="340" y2="168" stroke="#18181b" stroke-width="1.4"/>
+  <line x1="180" y1="168" x2="500" y2="168" stroke="#18181b" stroke-width="1.4"/>
+  <line x1="180" y1="168" x2="180" y2="190" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="500" y1="168" x2="500" y2="190" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="70" y="192" width="220" height="48" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
+  <text x="180" y="212" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Mongo notifications</text>
+  <text x="180" y="228" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">durable inbox row</text>
+  <rect x="390" y="192" width="220" height="48" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
+  <text x="500" y="212" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Redis notify:userId</text>
+  <text x="500" y="228" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">live hint (optional)</text>
+  <line x1="180" y1="240" x2="180" y2="270" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="500" y1="240" x2="500" y2="270" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="180" y1="270" x2="500" y2="270" stroke="#18181b" stroke-width="1.2"/>
+  <line x1="340" y1="270" x2="340" y2="292" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="294" width="280" height="40" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="319" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Bell polls GET /notifications</text>
+  <line x1="340" y1="334" x2="340" y2="356" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="358" width="280" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="381" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Unread count · Mark all</text>
+
+</svg>
+<p class="figcap">Figure 10. Notification flowchart. Mongo is the inbox. Redis is only a hint. Polling is the everyday path.</p>
+</div>
+
+  <p>Anything important writes a <code>notifications</code> document and publishes JSON on Redis channel <code>notify:&lt;userId&gt;</code>. The client polls <code>GET /v1/notifications</code> (and can subscribe in full-server deploys). Serverless hosts cannot keep a socket open — polling is the fallback, same idea as the old Vercel portal.</p>
+  <h3>Who gets notified</h3>
+  <table>
+    <tr><th>Event</th><th>Who</th></tr>
+    <tr><td>Student applied</td><td>Recruiter</td></tr>
+    <tr><td>Status shortlisted / rejected / interview</td><td>Student</td></tr>
+    <tr><td>Job approved</td><td>Recruiter</td></tr>
+    <tr><td>Resume analyzed</td><td>Student</td></tr>
+    <tr><td>Interview scheduled / moved / cancelled</td><td>Student and recruiter</td></tr>
+  </table>
+  <h3>Where to look</h3>
+  <p><code>server/src/notifications/</code> · <code>client/src/components/Bell.tsx</code></p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 11</p>
+  <h2>Feature: Admin analytics</h2>
+  <h3>What you see</h3>
+  <p>Student count, application count, placement rate, average package, pending job approvals, a 12-month applications chart.</p>
+  <h3>How it works — and a honesty note</h3>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Admin analytics flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Admin analytics — snapshot, not a live scan</text>
+  <rect x="210" y="46" width="260" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="69" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">GET /v1/admin/analytics</text>
+  <line x1="340" y1="82" x2="340" y2="110" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,112 L440,150 L340,188 L240,150 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="146" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Snapshot “latest”</text>
+  <text x="340" y="162" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">exists?</text>
+  <line x1="440" y1="150" x2="580" y2="150" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="505" y="140" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">yes</text>
+  <rect x="520" y="130" width="140" height="40" rx="8" fill="#047857"/>
+  <text x="590" y="155" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" fill="#fff">Return cached</text>
+  <line x1="240" y1="150" x2="100" y2="150" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="165" y="140" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">no</text>
+  <rect x="20" y="122" width="160" height="56" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="100" y="146" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11">Compute now</text>
+  <text x="100" y="164" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">save key latest</text>
+  <line x1="340" y1="188" x2="340" y2="220" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="170" y="222" width="340" height="40" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.5"/>
+  <text x="340" y="247" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Worker can roll up on analytics.rollup</text>
+  <line x1="340" y1="262" x2="340" y2="284" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="170" y="286" width="340" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="309" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">Admin dashboard cards + 12-month chart</text>
+
+</svg>
+<p class="figcap">Figure 11. Analytics flowchart. The dashboard must not recount every application on every load.</p>
+</div>
+
+  <p><code>GET /v1/admin/analytics</code> reads a snapshot document keyed <code>latest</code>. If none exists it computes on the fly. The worker can roll up on <code>analytics.rollup</code>. The UI subtitle says these are <strong>snapshot reads, not live scans</strong>. That is intentional: admin dashboards should not recount every application on every page load.</p>
+  <p>“Placement rate” here counts applications that reached shortlisted or interview — a campus proxy, not “offer letter signed”.</p>
+  <h3>Where to look</h3>
+  <p><code>server/src/analytics/</code> · <code>client/src/pages/AdminDashboard.tsx</code></p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 12</p>
+  <h2>The worker and the outbox</h2>
+  <p>This is the part that matches your “backend engineer” notes more than a simple CRUD app.</p>
+  <h3>The problem</h3>
+  <p>If login waited for rank recompute, or apply waited for email, the API would feel broken whenever Ollama or SMTP is slow. If we only pushed to Redis, a Redis blip would lose the “please analyze this resume” message.</p>
+  <h3>The pattern</h3>
+<div class="flowwrap">
+<svg class="flow" viewBox="0 0 680 438" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Outbox and worker flowchart">
+  
+  <text x="340" y="26" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">Outbox + worker — write first, side effects later</text>
+  <rect x="210" y="46" width="260" height="36" rx="18" fill="#047857"/>
+  <text x="340" y="69" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#fff">API write already succeeded</text>
+  <line x1="340" y1="82" x2="340" y2="104" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="170" y="106" width="340" height="48" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="126" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Mongo outboxevents  processedAt: null</text>
+  <text x="340" y="144" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">+ BullMQ job on placecell-events</text>
+  <line x1="340" y1="154" x2="340" y2="182" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="200" y="184" width="280" height="40" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.5"/>
+  <text x="340" y="209" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">Worker process(type, payload)</text>
+  <line x1="340" y1="224" x2="340" y2="254" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <path d="M340,256 L430,294 L340,332 L250,294 Z" fill="#fffbeb" stroke="#d97706" stroke-width="1.4"/>
+  <text x="340" y="298" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">Handler ok?</text>
+  <line x1="250" y1="294" x2="90" y2="294" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="165" y="284" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">fail</text>
+  <rect x="20" y="274" width="140" height="40" rx="8" fill="#18181b"/>
+  <text x="90" y="299" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" fill="#fff">BullMQ retries</text>
+  <line x1="430" y1="294" x2="590" y2="294" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="505" y="284" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">ok</text>
+  <rect x="520" y="274" width="140" height="40" rx="8" fill="#047857"/>
+  <text x="590" y="299" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" fill="#fff">processedAt = now</text>
+  <line x1="340" y1="332" x2="340" y2="368" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <rect x="140" y="370" width="400" height="48" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="340" y="390" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12">If Redis was down at emit time</text>
+  <text x="340" y="406" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">sweeper republishes unprocessed outbox rows</text>
+
+</svg>
+<p class="figcap">Figure 12. Outbox flowchart. The API never waits for Ollama or SMTP.</p>
+</div>
+
+  <p>Event names are in <code>server/src/common/types.ts</code>: <code>application.applied</code>, <code>application.status</code>, <code>job.approved</code>, <code>job.changed</code>, <code>profile.updated</code>, <code>resume.uploaded</code>, interview events, <code>analytics.rollup</code>.</p>
+  <h3>Pluggable sides</h3>
+  <ul>
+    <li><strong>LLM:</strong> <code>LLM_PROVIDER=ollama</code> or <code>anthropic</code>.</li>
+    <li><strong>Storage:</strong> <code>STORAGE_BACKEND=disk</code> or <code>s3</code> (MinIO / R2 / S3).</li>
+    <li><strong>Mail:</strong> SMTP if set, otherwise printed to the server log.</li>
+  </ul>
+  <p>You must run the worker in a second terminal. Without it, uploads stay <code>uploaded</code> forever and ranks stay cold.</p>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 13</p>
+  <h2>What we added recently (so you can map chat → git)</h2>
+  <p>All of this is on <code>main</code> at github.com/ShadowAN-AB/Campus_placement_portal. Newest last.</p>
+  <table>
+    <tr><th>Commit</th><th>In human language</th></tr>
+    <tr><td><code>c3b559c</code></td><td>First push of the PlaceCell portal.</td></tr>
+    <tr><td><code>770e55c</code></td><td>API: ObjectId helpers, application pagination, recruiter filters, applicant counts, interview populate, recruiter notify on apply.</td></tr>
+    <tr><td><code>7ce158b</code></td><td>Student home: KPIs, apply-from-list, applications table, career insights, upcoming interviews, auto-fill profile.</td></tr>
+    <tr><td><code>9054633</code></td><td>Recruiter home: filters, per-row actions, schedule modal.</td></tr>
+    <tr><td><code>5dce03e</code></td><td>Fix mixed string/ObjectId so applications and jobs actually resolve.</td></tr>
+    <tr><td><code>d321fdf</code></td><td>Fix ranked job list going empty when page was omitted (NaN slice).</td></tr>
+    <tr><td><code>9e5c277</code></td><td>Recruiter edit / close / reopen on desk and job detail.</td></tr>
+    <tr><td><code>ed4dd58</code></td><td>Company-fit UI + factor bars; profile fallback before upload.</td></tr>
+    <tr><td><code>747deab</code></td><td>Resume upload progress, versions, errors; worker id fixes.</td></tr>
+  </table>
+  <h3>The end-to-end loop we dry-ran</h3>
+  <ol>
+    <li>Ada (student) applied to Backend Engineer and Frontend Engineer.</li>
+    <li>Riya (recruiter) saw Ada, shortlisted her, booked a video interview.</li>
+    <li>Ada’s table showed Interview; inbox had shortlist + interview; Join / calendar worked.</li>
+    <li>Jobs ranked 89 / 71 / 59 / 23 after the cache warmed.</li>
+    <li>A real .docx resume analyzed: Nimbus 88%, Orchid Labs 87%, five-factor bars.</li>
+    <li>Riya edited SRE Intern CTC to ₹4L–₹8L, closed it, reopened it.</li>
+  </ol>
+</section>
+
+<section class="chapter">
+  <p class="eyebrow">Chapter 14</p>
+  <h2>How to run a demo yourself</h2>
+  <h3>Local npm (Mongo :27017 / nexus)</h3>
+  <ol>
+    <li>Mongo on <code>127.0.0.1:27017</code>, Redis on <code>6379</code>.</li>
+    <li><code>cp server/.env.example server/.env</code> if needed.</li>
+    <li><code>npm install</code> then <code>npm run seed</code> (optional; wipes demo collections) then <code>npm run dev</code>.</li>
+    <li>Open <code>http://localhost:5173</code>. Vite proxies <code>/v1</code> to the Node gateway on :5050.</li>
+  </ol>
+  <h3>Docker Compose (Mongo :27018 / placecell)</h3>
+  <ol>
+    <li>Start Docker Desktop.</li>
+    <li><code>npm run docker:up</code> then <code>npm run docker:seed</code>.</li>
+    <li>Open <code>http://localhost:8080</code>. Nginx serves the SPA and routes each <code>/v1</code> prefix to one container.</li>
+    <li>Compass: connect to <code>mongodb://127.0.0.1:27018</code>, database <code>placecell</code>, collection <code>users</code>.</li>
+  </ol>
+  <p>Sign in as student → Jobs, Resume, Interviews. Recruiter → Hiring. Admin → approvals and analytics. Demo password for all three seed users: <code>Password@123</code>.</p>
+  <div class="box">
+    <p class="kicker">Health</p>
+    <p>Local gateway: <code>GET http://localhost:5050/health</code> lists each feature. Docker: <code>GET http://localhost:8080/health</code>. A feature’s <code>/ready</code> checks Mongo and Redis.</p>
+  </div>
+  <h3>What this system is, and is not</h3>
+  <p><strong>Is:</strong> path-routed feature processes, a worker, cache, locks, idempotent apply, hashed passwords, pluggable AI/storage, Docker Compose, and role-based UIs for student, recruiter, and admin.</p>
+  <p><strong>Is not:</strong> a CDN + Kafka + multi-region design, or a database per service. Isolation is one Nest process per feature sharing Mongo.</p>
+  <p class="footer-note">If a screen and this report disagree, trust the code on <code>main</code>. This report describes the tree as of 17 September 2026.</p>
+</section>
+
+</body>
+</html>
