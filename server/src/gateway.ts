@@ -25,9 +25,15 @@ function hostOf(service: FeatureService) {
   return USE_SERVICE_DNS ? service : UPSTREAM_HOST;
 }
 
+function portOf(service: FeatureService) {
+  const named = process.env[`GATEWAY_${service.toUpperCase()}_PORT`];
+  if (named) return Number(named);
+  return SERVICE_PORTS[service];
+}
+
 function probe(service: FeatureService): Promise<boolean> {
   const hostname = hostOf(service);
-  const port = SERVICE_PORTS[service];
+  const port = portOf(service);
   return new Promise((resolve) => {
     const req = http.request(
       { hostname, port, path: "/health", method: "GET", timeout: 1500 },
@@ -47,7 +53,7 @@ function probe(service: FeatureService): Promise<boolean> {
 
 function proxy(req: http.IncomingMessage, res: http.ServerResponse, service: FeatureService, requestId: string) {
   const hostname = hostOf(service);
-  const port = SERVICE_PORTS[service];
+  const port = portOf(service);
   const headers = { ...req.headers, host: `${hostname}:${port}`, "x-request-id": requestId };
   const upstream = http.request(
     {
@@ -77,38 +83,43 @@ function proxy(req: http.IncomingMessage, res: http.ServerResponse, service: Fea
   req.pipe(upstream);
 }
 
-const server = http.createServer(async (req, res) => {
-  const path = req.url ?? "/";
-  const requestId = requestIdOf(req);
-  if (path.split("?")[0] === "/health") {
-    const services: Record<string, boolean> = {};
-    await Promise.all(
-      FEATURE_SERVICES.map(async (name) => {
-        services[name] = await probe(name);
-      }),
-    );
-    json(res, 200, { ok: true, gateway: true, services }, requestId);
-    return;
-  }
-  if (path.split("?")[0] === "/ready") {
-    const identity = await probe("identity");
-    const catalog = await probe("catalog");
-    if (!identity || !catalog) {
-      json(res, 503, { ok: false, identity, catalog }, requestId);
+export function createGatewayServer() {
+  return http.createServer(async (req, res) => {
+    const path = req.url ?? "/";
+    const requestId = requestIdOf(req);
+    if (path.split("?")[0] === "/health") {
+      const services: Record<string, boolean> = {};
+      await Promise.all(
+        FEATURE_SERVICES.map(async (name) => {
+          services[name] = await probe(name);
+        }),
+      );
+      json(res, 200, { ok: true, gateway: true, services }, requestId);
       return;
     }
-    json(res, 200, { ok: true, identity, catalog }, requestId);
-    return;
-  }
-  const service = resolveService(path);
-  if (!service) {
-    json(res, 404, { message: "No feature service for this path" }, requestId);
-    return;
-  }
-  proxy(req, res, service, requestId);
-});
+    if (path.split("?")[0] === "/ready") {
+      const identity = await probe("identity");
+      const catalog = await probe("catalog");
+      if (!identity || !catalog) {
+        json(res, 503, { ok: false, identity, catalog }, requestId);
+        return;
+      }
+      json(res, 200, { ok: true, identity, catalog }, requestId);
+      return;
+    }
+    const service = resolveService(path);
+    if (!service) {
+      json(res, 404, { message: "No feature service for this path" }, requestId);
+      return;
+    }
+    proxy(req, res, service, requestId);
+  });
+}
 
-server.listen(GATEWAY_PORT, () => {
-  const targets = FEATURE_SERVICES.map((s) => `${s}@${hostOf(s)}:${SERVICE_PORTS[s]}`).join(" ");
-  console.log(`PlaceCell gateway :${GATEWAY_PORT} → ${targets}`);
-});
+const entry = process.argv[1] ?? "";
+if (/\bgateway\.(ts|js)$/.test(entry)) {
+  createGatewayServer().listen(GATEWAY_PORT, () => {
+    const targets = FEATURE_SERVICES.map((s) => `${s}@${hostOf(s)}:${portOf(s)}`).join(" ");
+    console.log(`PlaceCell gateway :${GATEWAY_PORT} → ${targets}`);
+  });
+}
