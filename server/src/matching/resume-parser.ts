@@ -1,4 +1,5 @@
 import mammoth from "mammoth";
+import { ResumeExtract } from "./resume-extract";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
 
@@ -35,10 +36,10 @@ const SKILL_BANK = [
   "rust",
 ];
 
-export function regexFallback(text: string) {
+export function regexFallback(text: string): ResumeExtract {
   const lower = text.toLowerCase();
   const skills = SKILL_BANK.filter((s) => lower.includes(s));
-  const education: { degree?: string }[] = [];
+  const education: ResumeExtract["education"] = [];
   if (/b\.?tech|bachelor/i.test(text)) education.push({ degree: "B.Tech" });
   if (/m\.?tech|master/i.test(text)) education.push({ degree: "M.Tech" });
   const years = Number((text.match(/(\d+)\+?\s+years?/i) ?? [])[1] ?? 0);
@@ -46,7 +47,7 @@ export function regexFallback(text: string) {
     skills,
     education,
     projects: [],
-    certifications: [] as string[],
+    certifications: [],
     yearsOfExperience: years,
   };
 }

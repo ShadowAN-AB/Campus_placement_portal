@@ -124,13 +124,7 @@ export class EventsProcessor extends WorkerHost {
           temperature: 0.1,
         });
         const parsed = parseResumeExtract(raw);
-        extracted = {
-          skills: parsed.skills,
-          education: parsed.education,
-          projects: parsed.projects,
-          certifications: parsed.certifications,
-          yearsOfExperience: Number(parsed.yearsOfExperience ?? extracted.yearsOfExperience),
-        };
+        extracted = parsed;
       } catch {
         this.log.warn("LLM extract failed; using regex fallback");
       }
