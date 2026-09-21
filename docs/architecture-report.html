@@ -135,6 +135,7 @@
   <p class="eyebrow">Contents</p>
   <h2>How to read this report</h2>
   <ol class="toc">
+    <li>Viva cheat sheet</li>
     <li>Start here — what PlaceCell is, in one page</li>
     <li>Whole-project architecture <em>(system map + campus loop flowchart)</em></li>
     <li>How a request travels <em>(flowchart)</em></li>
@@ -156,6 +157,20 @@
 </section>
 
 <section class="chapter">
+  <p class="eyebrow">Viva</p>
+  <h2>Cheat sheet (one page)</h2>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Isolation</td><td>One Nest <strong>process</strong> per feature behind a path gateway. Mongo is <strong>shared</strong> — process isolation, not DB-per-service.</td></tr>
+    <tr><td>Prove a feature can die</td><td>Stop matching on <code>:5054</code> (<code>kill $(lsof -t -i:5054)</code> or <code>docker compose stop matching</code>). Jobs and apply still work. Resume shows a service banner.</td></tr>
+    <tr><td>CAP</td><td>Apply and interview booking are CP (unique index, idempotency key, Redis lock). Job feed and inbox are AP (1-hour rank cache, polling).</td></tr>
+    <tr><td>Compass</td><td>Local npm: <code>127.0.0.1:27017</code> database <code>nexus</code>. Docker: <code>127.0.0.1:27018</code> database <code>placecell</code>. Accounts are in <code>users</code> with bcrypt <code>passwordHash</code>.</td></tr>
+    <tr><td>Demo logins</td><td><code>student1@spp.dev</code> / <code>recruiter@spp.dev</code> / <code>admin@spp.dev</code> — password <code>Password@123</code>.</td></tr>
+    <tr><td>Local vs Docker</td><td><code>npm run dev</code> → <code>http://localhost:5173</code>. <code>npm run docker:up</code> → <code>http://localhost:8080</code>.</td></tr>
+  </table>
+</section>
+
+<section class="chapter">
   <p class="eyebrow">Chapter 1</p>
   <h2>What PlaceCell is, in one page</h2>
   <p>PlaceCell is a campus placement workspace. Three kinds of people use it:</p>
@@ -164,7 +179,7 @@
     <li><strong>Recruiters</strong> post roles, filter applicants, shortlist or reject, edit or close a role, and book interviews.</li>
     <li><strong>Admins</strong> (the placement cell) approve jobs and read analytics snapshots.</li>
   </ul>
-  <p>It is <strong>not</strong> a copy of the older Express + Vercel app. It is a new NestJS system: <strong>one OS process per feature</strong> behind a path gateway, a separate worker for slow work, Redis for cache and locks, MongoDB as the source of truth, and MinIO for resume files in Docker.</p>
+  <p>It is <strong>not</strong> a copy of the older Express + Vercel app. It is a new NestJS system: <strong>one OS process per feature</strong> behind a path gateway, a separate worker for slow work, Redis for cache and locks, MongoDB as the source of truth, and MinIO for resume files in Docker. Mongo is shared across processes. Isolation is deployment (a down matching process cannot crash catalog), not a database per service.</p>
   <div class="box">
     <p class="kicker">The sentence to remember</p>
     <p>The browser never talks to Mongo or Redis. It only calls <code>/v1/...</code>. Slow or retryable work (resume parse, email, rank refresh) is written to an <em>outbox</em> row, then a worker picks it up. That is why resume upload returns <code>202 Accepted</code> instead of waiting for the LLM.</p>
@@ -199,15 +214,16 @@
   <text x="340" y="28" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#047857">PlaceCell — whole-project map</text>
   <rect x="40" y="48" width="180" height="52" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
   <text x="130" y="70" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">Browser</text>
-  <text x="130" y="88" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">React 19 + Vite :5173</text>
+  <text x="130" y="88" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">Vite :5173 or nginx :8080</text>
   <line x1="220" y1="74" x2="268" y2="74" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
   <text x="244" y="66" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">/v1 + JWT</text>
   <rect x="270" y="40" width="220" height="68" rx="8" fill="#ecfdf5" stroke="#047857" stroke-width="1.6"/>
-  <text x="380" y="66" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">NestJS API :5050</text>
-  <text x="380" y="84" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#047857">stateless · can run two copies</text>
-  <rect x="520" y="48" width="130" height="52" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
-  <text x="585" y="70" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">nginx (opt.)</text>
-  <text x="585" y="88" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#52525b">7 feature processes</text>
+  <text x="380" y="66" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">Gateway</text>
+  <text x="380" y="84" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#047857">Node :5050 · nginx :8080</text>
+  <rect x="520" y="40" width="130" height="68" rx="8" fill="#fff" stroke="#18181b" stroke-width="1.4"/>
+  <text x="585" y="62" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="11" font-weight="600">7 processes</text>
+  <text x="585" y="78" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">id cat app match</text>
+  <text x="585" y="92" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="9" fill="#52525b">iv nt analytics</text>
   <line x1="380" y1="108" x2="380" y2="138" stroke="#18181b" stroke-width="1.4" marker-end="url(#arrow)"/>
   <rect x="40" y="142" width="190" height="64" rx="8" fill="#e4e4e7" stroke="#18181b" stroke-width="1.4"/>
   <text x="135" y="168" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="12" font-weight="600">MongoDB</text>
@@ -230,7 +246,7 @@
   <text x="380" y="382" text-anchor="middle" font-family="Avenir Next, Helvetica, sans-serif" font-size="10" fill="#d1fae5">parse resume · score · mail · ranks · analytics</text>
 
 </svg>
-<p class="figcap">Figure 1. Whole-project map. The browser only calls /v1. Slow work leaves the API through the outbox.</p>
+<p class="figcap">Figure 1. Whole-project map. The browser only calls /v1. The gateway fans out to seven feature processes. Mongo is shared. Slow work leaves through the outbox.</p>
 </div>
 
 <div class="flowwrap">

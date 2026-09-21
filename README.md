@@ -6,6 +6,16 @@ Campus placement platform for students, recruiters, and the placement cell. Each
 
 This is a new NestJS system. It is not a fork of the earlier Express/Vercel app.
 
+## Viva cheat sheet
+
+| Question | Answer |
+|---|---|
+| Isolation | One Nest **process** per feature. **Shared Mongo** — not a database per service. |
+| If matching dies | Kill `:5054` (or `docker compose stop matching`). Jobs and apply still work. Resume page shows a banner. |
+| CAP | Apply + interview booking are **CP** (unique indexes, idempotency, Redis lock). Job feed + inbox are **AP** (cached ranks, polling). |
+| Compass | Local npm: `127.0.0.1:27017` database **nexus**. Docker: `127.0.0.1:27018` database **placecell**. Users live in `users` (`passwordHash`, not plaintext). |
+| Demo | Student `student1@spp.dev` / Recruiter `recruiter@spp.dev` / Admin `admin@spp.dev` — password `Password@123`. |
+
 ## Architecture
 
 - **Gateway** — Node (`server/src/gateway.ts` on :5050) locally, nginx on :8080 in Compose. Routes each `/v1/...` prefix to one feature process.
@@ -33,7 +43,7 @@ If matching dies, jobs and apply still work. If analytics dies, admin can still 
 ## Quick start
 
 ```bash
-cd placecell
+cd nexus   # or clone Campus_placement_portal and cd into it
 cp server/.env.example server/.env
 # edit JWT_SECRET and ADMIN_SIGNUP_CODE before any production deploy
 
