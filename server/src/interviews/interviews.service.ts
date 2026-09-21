@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { Inject, UnauthorizedException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
@@ -44,11 +45,11 @@ export class InterviewsService {
     if (!job || String(job.postedBy) !== user.userId) throw new ForbiddenException();
 
     const lockKey = `lock:interview:${app.studentId}:${when.toISOString()}`;
-    let locked: string | null = "OK";
+    let locked: string | null;
     try {
       locked = await this.redis.set(lockKey, "1", "EX", 15, "NX");
     } catch {
-      locked = "OK";
+      throw new ServiceUnavailableException("Interview booking is temporarily unavailable");
     }
     if (!locked) throw new ConflictException("Slot is being booked");
 
@@ -85,7 +86,11 @@ export class InterviewsService {
       }
       throw err;
     } finally {
-      await this.redis.del(lockKey);
+      try {
+        await this.redis.del(lockKey);
+      } catch {
+        // TTL expires the lock if Redis blips during release.
+      }
     }
   }
 
