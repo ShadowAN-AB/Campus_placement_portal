@@ -998,7 +998,7 @@
   </ol>
   <h3>Docker Compose (Mongo :27018 / placecell)</h3>
   <ol>
-    <li>Start Docker Desktop.</li>
+    <li>Start Docker Desktop. Copy <code>.env.example</code> to <code>.env</code> and set <code>JWT_SECRET</code> (Compose will not start without it).</li>
     <li><code>npm run docker:up</code> then <code>npm run docker:seed</code>.</li>
     <li>Open <code>http://localhost:8080</code>. Nginx serves the SPA and routes each <code>/v1</code> prefix to one container. Resume scoring uses <code>LLM_PROVIDER=regex</code> so Ollama is not required.</li>
     <li>Compass: connect to <code>mongodb://127.0.0.1:27018</code>, database <code>placecell</code>, collection <code>users</code>.</li>

@@ -44,7 +44,8 @@ If matching dies, jobs and apply still work. If analytics dies, admin can still 
 
 ```bash
 cd nexus   # or clone Campus_placement_portal and cd into it
-cp server/.env.example server/.env
+cp .env.example .env                 # JWT_SECRET required by Docker Compose
+cp server/.env.example server/.env   # Nest local npm
 # edit JWT_SECRET and ADMIN_SIGNUP_CODE before any production deploy
 
 npm install
@@ -113,7 +114,7 @@ Nginx serves the SPA and `/v1/...` prefixes. `/health` and `/ready` are proxied 
 
 ## Environment
 
-See [server/.env.example](server/.env.example). In `NODE_ENV=production` the process **throws** if `JWT_SECRET`, `ADMIN_SIGNUP_CODE`, or `MONGODB_URI` is missing or still a known default.
+See [server/.env.example](server/.env.example) for local npm and [.env.example](.env.example) for Compose substitution. In `NODE_ENV=production` the process **throws** if `JWT_SECRET`, `ADMIN_SIGNUP_CODE`, or `MONGODB_URI` is missing or still a known default. Compose interpolates `JWT_SECRET` from the **root** `.env` — there is no baked default in `docker-compose.yml`.
 
 - `STORAGE_BACKEND=disk` locally; `s3` against MinIO/R2/S3 in compose/prod
 - `LLM_PROVIDER=ollama` locally; `regex` in Compose so resume scoring works without Ollama; `anthropic` in production

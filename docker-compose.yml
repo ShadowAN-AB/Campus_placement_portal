@@ -4,8 +4,8 @@ x-env: &env
   CLIENT_ORIGIN: http://localhost:8080
   MONGODB_URI: mongodb://mongo:27017/placecell
   REDIS_URL: redis://redis:6379
-  JWT_SECRET: ${JWT_SECRET:-placecell-docker-dev-secret-not-for-prod}
-  ADMIN_SIGNUP_CODE: ${ADMIN_SIGNUP_CODE:-placement_admin_2026}
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the project root .env (copy .env.example)}
+  ADMIN_SIGNUP_CODE: ${ADMIN_SIGNUP_CODE:?Set ADMIN_SIGNUP_CODE in the project root .env (copy .env.example)}
   STORAGE_BACKEND: s3
   S3_BUCKET: placecell-resumes
   S3_REGION: us-east-1
