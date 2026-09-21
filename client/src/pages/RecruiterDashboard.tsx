@@ -17,6 +17,10 @@ type Job = {
   maxSalary?: number;
   minExperience?: number;
   totalApplicants?: number;
+  season?: string;
+  departments?: string[];
+  minCgpa?: number;
+  graduationYear?: number;
 };
 
 type AppRow = {
@@ -59,6 +63,10 @@ export function RecruiterDashboard() {
     minExperience: 0,
     minSalary: 0,
     maxSalary: 0,
+    season: "",
+    departments: "",
+    minCgpa: 0,
+    graduationYear: 0,
   });
   const [form, setForm] = useState({
     title: "",
@@ -68,6 +76,10 @@ export function RecruiterDashboard() {
     minExperience: 0,
     minSalary: 0,
     maxSalary: 0,
+    season: "2026-27",
+    departments: "cse, it",
+    minCgpa: 7,
+    graduationYear: 2027,
   });
   const [error, setError] = useState("");
   const [jobsDown, setJobsDown] = useState(false);
@@ -127,12 +139,27 @@ export function RecruiterDashboard() {
         body: JSON.stringify({
           ...form,
           requiredSkills: form.requiredSkills.split(",").map((s) => s.trim()),
+          departments: form.departments.split(",").map((s) => s.trim()).filter(Boolean),
           minExperience: Number(form.minExperience),
           minSalary: Number(form.minSalary),
           maxSalary: Number(form.maxSalary),
+          minCgpa: Number(form.minCgpa),
+          graduationYear: Number(form.graduationYear) || 0,
         }),
       });
-      setForm({ title: "", company: "", description: "", requiredSkills: "node, typescript", minExperience: 0, minSalary: 0, maxSalary: 0 });
+      setForm({
+        title: "",
+        company: "",
+        description: "",
+        requiredSkills: "node, typescript",
+        minExperience: 0,
+        minSalary: 0,
+        maxSalary: 0,
+        season: "2026-27",
+        departments: "cse, it",
+        minCgpa: 7,
+        graduationYear: 2027,
+      });
       loadJobs();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to post job");
@@ -159,6 +186,10 @@ export function RecruiterDashboard() {
       minExperience: job.minExperience ?? 0,
       minSalary: job.minSalary ?? 0,
       maxSalary: job.maxSalary ?? 0,
+      season: job.season ?? "",
+      departments: (job.departments ?? []).join(", "),
+      minCgpa: job.minCgpa ?? 0,
+      graduationYear: job.graduationYear ?? 0,
     });
     setEditing(true);
   }
@@ -172,9 +203,12 @@ export function RecruiterDashboard() {
         body: JSON.stringify({
           ...edit,
           requiredSkills: edit.requiredSkills.split(",").map((s) => s.trim()).filter(Boolean),
+          departments: edit.departments.split(",").map((s) => s.trim()).filter(Boolean),
           minExperience: Number(edit.minExperience),
           minSalary: Number(edit.minSalary),
           maxSalary: Number(edit.maxSalary),
+          minCgpa: Number(edit.minCgpa),
+          graduationYear: Number(edit.graduationYear) || 0,
         }),
       });
       setEditing(false);
@@ -234,6 +268,10 @@ export function RecruiterDashboard() {
         <input className="input-base" type="number" min={0} placeholder="Min years" value={form.minExperience} onChange={(e) => setForm({ ...form, minExperience: Number(e.target.value) })} />
         <input className="input-base" type="number" min={0} placeholder="Min CTC" value={form.minSalary} onChange={(e) => setForm({ ...form, minSalary: Number(e.target.value) })} />
         <input className="input-base" type="number" min={0} placeholder="Max CTC" value={form.maxSalary} onChange={(e) => setForm({ ...form, maxSalary: Number(e.target.value) })} />
+        <input className="input-base" placeholder="Season (e.g. 2026-27)" value={form.season} onChange={(e) => setForm({ ...form, season: e.target.value })} />
+        <input className="input-base" placeholder="Departments (comma)" value={form.departments} onChange={(e) => setForm({ ...form, departments: e.target.value })} />
+        <input className="input-base" type="number" min={0} max={10} step={0.1} placeholder="Min CGPA" value={form.minCgpa} onChange={(e) => setForm({ ...form, minCgpa: Number(e.target.value) })} />
+        <input className="input-base" type="number" placeholder="Grad year" value={form.graduationYear} onChange={(e) => setForm({ ...form, graduationYear: Number(e.target.value) })} />
         <button className="btn-primary">Post job</button>
       </form>
 
@@ -261,6 +299,8 @@ export function RecruiterDashboard() {
                   <h2 className="font-heading text-xl">{selectedJob.title}</h2>
                   <p className="text-sm text-zinc-500">
                     {selectedJob.company} · {inr(selectedJob.minSalary)} – {inr(selectedJob.maxSalary)} · {selectedJob.minExperience ?? 0}+ yrs
+                    {selectedJob.season ? ` · ${selectedJob.season}` : ""}
+                    {(selectedJob.departments ?? []).length ? ` · ${(selectedJob.departments ?? []).join("/")}` : ""}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {(selectedJob.requiredSkills ?? []).map((s) => <Chip key={s}>{s}</Chip>)}
@@ -288,6 +328,10 @@ export function RecruiterDashboard() {
                   <input className="input-base" type="number" min={0} placeholder="Min years" value={edit.minExperience} onChange={(e) => setEdit({ ...edit, minExperience: Number(e.target.value) })} />
                   <input className="input-base" type="number" min={0} placeholder="Min CTC" value={edit.minSalary} onChange={(e) => setEdit({ ...edit, minSalary: Number(e.target.value) })} />
                   <input className="input-base" type="number" min={0} placeholder="Max CTC" value={edit.maxSalary} onChange={(e) => setEdit({ ...edit, maxSalary: Number(e.target.value) })} />
+                  <input className="input-base" placeholder="Season" value={edit.season} onChange={(e) => setEdit({ ...edit, season: e.target.value })} />
+                  <input className="input-base" placeholder="Departments (comma)" value={edit.departments} onChange={(e) => setEdit({ ...edit, departments: e.target.value })} />
+                  <input className="input-base" type="number" min={0} max={10} step={0.1} placeholder="Min CGPA" value={edit.minCgpa} onChange={(e) => setEdit({ ...edit, minCgpa: Number(e.target.value) })} />
+                  <input className="input-base" type="number" placeholder="Grad year" value={edit.graduationYear} onChange={(e) => setEdit({ ...edit, graduationYear: Number(e.target.value) })} />
                   <button className="btn-primary" onClick={saveJob}>Save changes</button>
                 </div>
               )}

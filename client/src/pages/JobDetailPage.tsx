@@ -71,8 +71,18 @@ export function JobDetailPage() {
             <Chip key={s}>{s}</Chip>
           ))}
         </div>
+        {(job.season || (job.departments as string[] | undefined)?.length || job.minCgpa || job.graduationYear) && (
+          <p className="mt-3 text-sm text-zinc-500">
+            {[job.season, ((job.departments as string[]) ?? []).join("/"), job.minCgpa ? `CGPA ${job.minCgpa}+` : "", job.graduationYear ? `grad ${job.graduationYear}` : ""]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
+        {user?.role === "student" && job.eligible === false && (
+          <p className="mt-3 text-sm text-amber-800">{((job.eligibilityReasons as string[]) ?? []).join(". ")}</p>
+        )}
       </div>
-      {user?.role === "student" && !applied && !closed && (
+      {user?.role === "student" && !applied && !closed && job.eligible !== false && (
         <button
           className="btn-accent"
           onClick={async () => {
@@ -91,6 +101,9 @@ export function JobDetailPage() {
         >
           Apply
         </button>
+      )}
+      {user?.role === "student" && !applied && !closed && job.eligible === false && (
+        <p className="text-sm text-zinc-500">You are not eligible to apply for this campus drive.</p>
       )}
       {user?.role === "student" && closed && !applied && (
         <p className="text-sm text-zinc-500">This role is closed.</p>

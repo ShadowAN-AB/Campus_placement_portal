@@ -12,6 +12,12 @@ type Job = {
   minSalary: number;
   maxSalary: number;
   matchScore?: number;
+  season?: string;
+  departments?: string[];
+  minCgpa?: number;
+  graduationYear?: number;
+  eligible?: boolean;
+  eligibilityReasons?: string[];
 };
 
 type Application = {
@@ -22,7 +28,15 @@ type Application = {
   jobId?: { _id?: string; title?: string; company?: string };
 };
 
-type Profile = { skills: string[]; bio: string; expectedSalary: number; yearsOfExperience: number };
+type Profile = {
+  skills: string[];
+  bio: string;
+  expectedSalary: number;
+  yearsOfExperience: number;
+  department?: string;
+  cgpa?: number;
+  graduationYear?: number;
+};
 
 type Interview = {
   _id: string;
@@ -40,7 +54,15 @@ export function StudentDashboard() {
   const [appTotal, setAppTotal] = useState(0);
   const [appPage, setAppPage] = useState(1);
   const [appPages, setAppPages] = useState(1);
-  const [profile, setProfile] = useState({ skills: "", bio: "", expectedSalary: 0, yearsOfExperience: 0 });
+  const [profile, setProfile] = useState({
+    skills: "",
+    bio: "",
+    expectedSalary: 0,
+    yearsOfExperience: 0,
+    department: "",
+    cgpa: 0,
+    graduationYear: 0,
+  });
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [error, setError] = useState("");
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
@@ -56,7 +78,7 @@ export function StudentDashboard() {
         page,
       }),
       apiTry<{ items: Application[] }>("/v1/applications/me?page=1&pageSize=50", { items: [] }),
-      apiTry<Profile>("/v1/profile", { skills: [], bio: "", expectedSalary: 0, yearsOfExperience: 0 }),
+      apiTry<Profile>("/v1/profile", { skills: [], bio: "", expectedSalary: 0, yearsOfExperience: 0, department: "", cgpa: 0, graduationYear: 0 }),
       apiTry<Interview[]>("/v1/interviews?upcoming=true", []),
     ]);
     setDown({
@@ -74,6 +96,9 @@ export function StudentDashboard() {
       bio: me.data.bio ?? "",
       expectedSalary: me.data.expectedSalary ?? 0,
       yearsOfExperience: me.data.yearsOfExperience ?? 0,
+      department: me.data.department ?? "",
+      cgpa: me.data.cgpa ?? 0,
+      graduationYear: me.data.graduationYear ?? 0,
     });
     setInterviews(ivs.data);
     setAppliedIds(new Set(allApps.data.items.map((a) => String(a.jobId?._id ?? "")).filter(Boolean)));
@@ -121,6 +146,9 @@ export function StudentDashboard() {
           yearsOfExperience: 1,
           expectedSalary: 1200000,
           bio: "CS student focused on full-stack systems.",
+          department: "cse",
+          cgpa: 8.2,
+          graduationYear: 2027,
         }),
       });
       await load();
@@ -164,12 +192,18 @@ export function StudentDashboard() {
               bio: profile.bio,
               expectedSalary: Number(profile.expectedSalary),
               yearsOfExperience: Number(profile.yearsOfExperience),
+              department: profile.department,
+              cgpa: Number(profile.cgpa),
+              graduationYear: Number(profile.graduationYear) || undefined,
             }),
           });
           load();
         }}
       >
         <input className="input-base md:col-span-2" placeholder="Skills (comma)" value={profile.skills} onChange={(e) => setProfile({ ...profile, skills: e.target.value })} />
+        <input className="input-base" placeholder="Department (e.g. cse)" value={profile.department} onChange={(e) => setProfile({ ...profile, department: e.target.value })} />
+        <input className="input-base" type="number" min={0} max={10} step={0.1} placeholder="CGPA" value={profile.cgpa} onChange={(e) => setProfile({ ...profile, cgpa: Number(e.target.value) })} />
+        <input className="input-base" type="number" placeholder="Grad year" value={profile.graduationYear} onChange={(e) => setProfile({ ...profile, graduationYear: Number(e.target.value) })} />
         <input className="input-base" type="number" placeholder="Expected CTC" value={profile.expectedSalary} onChange={(e) => setProfile({ ...profile, expectedSalary: Number(e.target.value) })} />
         <input className="input-base" type="number" placeholder="Years exp" value={profile.yearsOfExperience} onChange={(e) => setProfile({ ...profile, yearsOfExperience: Number(e.target.value) })} />
         <textarea className="input-base md:col-span-3" placeholder="Bio" value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} />
@@ -186,6 +220,16 @@ export function StudentDashboard() {
                     <p className="text-xs uppercase tracking-wide text-emerald-600">{job.company}</p>
                     <h2 className="font-heading text-xl">{job.title}</h2>
                     <p className="mt-1 text-sm text-zinc-500">{inr(job.minSalary)} – {inr(job.maxSalary)}</p>
+                    {(job.season || job.departments?.length || job.minCgpa) && (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {[job.season, (job.departments ?? []).join("/"), job.minCgpa ? `CGPA ${job.minCgpa}+` : "", job.graduationYear ? `grad ${job.graduationYear}` : ""]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                    {job.eligible === false && (
+                      <p className="mt-1 text-xs text-amber-800">{(job.eligibilityReasons ?? []).join(" · ")}</p>
+                    )}
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {(job.requiredSkills ?? []).slice(0, 6).map((s) => <Chip key={s}>{s}</Chip>)}
                     </div>
@@ -198,6 +242,8 @@ export function StudentDashboard() {
                       <Link to={`/jobs/${job._id}`} className="btn-ghost">View</Link>
                       {appliedIds.has(job._id) ? (
                         <span className="btn-ghost pointer-events-none opacity-60">Applied</span>
+                      ) : job.eligible === false ? (
+                        <span className="btn-ghost pointer-events-none opacity-60">Not eligible</span>
                       ) : (
                         <button className="btn-primary" onClick={() => applyForJob(job._id)}>Apply</button>
                       )}
