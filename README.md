@@ -92,8 +92,10 @@ kill $(lsof -t -i:5054)   # matching / resume
 Homebrew Mongo already uses `:27017` (`nexus`). Compose does **not** steal that port.
 
 ```bash
-npm run docker:up      # Mongo, Redis, MinIO, 7 services, worker, nginx+SPA
+cp .env.example .env   # required — Compose has no baked JWT_SECRET
+npm run docker:up      # Mongo, Redis, MinIO, 7 services, gateway, worker, nginx+SPA
 npm run docker:seed    # demo users/jobs into the Docker DB
+# npm run docker:dev   # bind-mount server/src + tsx watch; SPA: npm run dev --prefix client
 # npm run docker:infra # Mongo/Redis/MinIO only
 # npm run docker:down
 ```

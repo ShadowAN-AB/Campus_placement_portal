@@ -1,0 +1,33 @@
+# API hot-reload overlay. Default `docker compose up` stays the evaluation (built) images.
+#   npm run docker:dev
+# Then run the SPA on the host: npm run dev --prefix client  (Vite proxies /v1 to :5050)
+x-hot: &hot
+  command: npx tsx watch src/main.ts
+  volumes:
+    - ./server/src:/app/src
+  environment:
+    NODE_ENV: development
+
+services:
+  identity:
+    <<: *hot
+  catalog:
+    <<: *hot
+  applications:
+    <<: *hot
+  matching:
+    <<: *hot
+  interviews:
+    <<: *hot
+  notifications:
+    <<: *hot
+  analytics:
+    <<: *hot
+  gateway:
+    <<: *hot
+    command: npx tsx watch src/gateway.ts
+    ports:
+      - "5050:5050"
+  worker:
+    <<: *hot
+    command: npx tsx watch src/worker.ts
