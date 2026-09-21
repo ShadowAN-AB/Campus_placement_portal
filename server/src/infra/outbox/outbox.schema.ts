@@ -3,7 +3,7 @@ import { HydratedDocument } from "mongoose";
 
 @Schema({ timestamps: true })
 export class OutboxEvent {
-  @Prop({ required: true, index: true })
+  @Prop({ type: String, required: true, index: true })
   type: string;
 
   @Prop({ type: Object, required: true })
