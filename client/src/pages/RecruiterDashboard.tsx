@@ -345,6 +345,9 @@ export function RecruiterDashboard() {
               <option value="pending">Pending</option>
               <option value="shortlisted">Shortlisted</option>
               <option value="interview">Interview</option>
+              <option value="offered">Offered</option>
+              <option value="accepted">Accepted</option>
+              <option value="declined">Declined</option>
               <option value="rejected">Rejected</option>
             </select>
             <input className="input-base" type="number" min={0} max={100} placeholder="Min match %" value={filters.minMatchScore} onChange={(e) => setFilters({ ...filters, minMatchScore: e.target.value })} />
@@ -364,6 +367,7 @@ export function RecruiterDashboard() {
               <span className="self-center text-sm">{picked.length} selected</span>
               <button className="btn-accent" onClick={() => bulk("shortlisted")}>Shortlist</button>
               <button className="btn-ghost" onClick={() => bulk("interview")}>Move to interview</button>
+              <button className="btn-primary" onClick={() => bulk("offered")}>Send offer</button>
               <button className="btn-danger" onClick={() => bulk("rejected")}>Reject</button>
             </div>
           )}
@@ -396,6 +400,7 @@ export function RecruiterDashboard() {
                       <td className="p-3">
                         <div className="flex flex-wrap gap-1.5">
                           <button className="btn-accent !px-3 !py-1.5" onClick={() => setStatus(a._id, "shortlisted")}>Shortlist</button>
+                          <button className="btn-primary !px-3 !py-1.5" onClick={() => setStatus(a._id, "offered")}>Offer</button>
                           <button className="btn-ghost !px-3 !py-1.5" onClick={() => setScheduleFor(a)}>Schedule</button>
                           <button className="btn-danger !px-3 !py-1.5" onClick={() => setStatus(a._id, "rejected")}>Reject</button>
                         </div>

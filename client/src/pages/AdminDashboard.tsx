@@ -36,7 +36,7 @@ export function AdminDashboard() {
 
   return (
     <div>
-      <PageHead eyebrow="Admin" title="Placement cell" subtitle="Analytics are snapshot reads, not live scans." />
+      <PageHead eyebrow="Admin" title="Placement cell" subtitle="Placement rate is accepted offers over applications." />
       {analyticsDown && <ServiceNotice name="analytics" />}
       {catalogDown && <ServiceNotice name="jobs" />}
       {data && (
@@ -74,7 +74,7 @@ export function AdminDashboard() {
         {data && (
           <div className="surface p-5">
             <h2 className="font-heading text-lg tracking-tight">Top companies</h2>
-            <p className="mt-0.5 text-sm text-zinc-500">By applications this snapshot</p>
+            <p className="mt-0.5 text-sm text-zinc-500">By accepted offers this snapshot</p>
             <ul className="mt-4 space-y-3">
               {(data.topCompanies ?? []).slice(0, 6).map((c) => (
                 <li key={c.company} className="flex items-center justify-between text-sm">

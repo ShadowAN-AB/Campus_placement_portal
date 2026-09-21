@@ -117,9 +117,10 @@ export function StudentDashboard() {
   }, [jobs, profile.skills]);
 
   const stats = useMemo(() => {
-    const shortlisted = apps.filter((a) => a.status === "shortlisted" || a.status === "interview").length;
+    const shortlisted = apps.filter((a) => a.status === "shortlisted" || a.status === "interview" || a.status === "offered").length;
+    const placed = apps.filter((a) => a.status === "accepted").length;
     const avg = apps.length ? Math.round(apps.reduce((s, a) => s + (a.matchScore || 0), 0) / apps.length) : 0;
-    return { shortlisted, avg };
+    return { shortlisted, placed, avg };
   }, [apps]);
 
   async function applyForJob(jobId: string) {
@@ -174,9 +175,10 @@ export function StudentDashboard() {
       {down.catalog && <ServiceNotice name="jobs / profile" />}
       {down.applications && <ServiceNotice name="applications" />}
       {down.interviews && <ServiceNotice name="interviews" />}
-      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-5">
         <Kpi label="Applications" value={appTotal} />
         <Kpi label="Shortlisted / Interview" value={stats.shortlisted} />
+        <Kpi label="Offers accepted" value={stats.placed} />
         <Kpi label="Avg. match" value={`${stats.avg}%`} />
         <Kpi label="Open roles" value={jobs.length} />
       </div>
@@ -267,6 +269,7 @@ export function StudentDashboard() {
                         <th className="pb-2">Role</th>
                         <th className="pb-2">Company</th>
                         <th className="pb-2">Status</th>
+                        <th className="pb-2">Decision</th>
                         <th className="pb-2 text-right">Match</th>
                         <th className="pb-2 text-right">Applied</th>
                       </tr>
@@ -277,6 +280,38 @@ export function StudentDashboard() {
                           <td className="py-3 font-medium">{a.jobId?.title ?? "—"}</td>
                           <td className="py-3 text-zinc-600">{a.jobId?.company ?? "—"}</td>
                           <td className="py-3"><StatusBadge status={a.status} /></td>
+                          <td className="py-3">
+                            {a.status === "offered" ? (
+                              <div className="flex gap-1.5">
+                                <button
+                                  className="btn-accent !px-3 !py-1.5"
+                                  onClick={async () => {
+                                    await api(`/v1/applications/${a._id}/decision`, {
+                                      method: "PUT",
+                                      body: JSON.stringify({ status: "accepted" }),
+                                    });
+                                    await load(appPage);
+                                  }}
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  className="btn-ghost !px-3 !py-1.5"
+                                  onClick={async () => {
+                                    await api(`/v1/applications/${a._id}/decision`, {
+                                      method: "PUT",
+                                      body: JSON.stringify({ status: "declined" }),
+                                    });
+                                    await load(appPage);
+                                  }}
+                                >
+                                  Decline
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-zinc-400">—</span>
+                            )}
+                          </td>
                           <td className="py-3 text-right tabular-nums">{Math.round(a.matchScore || 0)}%</td>
                           <td className="py-3 text-right text-zinc-500">{a.appliedAt ? new Date(a.appliedAt).toLocaleDateString("en-IN") : "—"}</td>
                         </tr>

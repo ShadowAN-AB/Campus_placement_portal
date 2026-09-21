@@ -109,9 +109,41 @@ export function JobDetailPage() {
         <p className="text-sm text-zinc-500">This role is closed.</p>
       )}
       {user?.role === "student" && applied && (
-        <p className="text-sm text-zinc-600">
-          You already applied · <StatusBadge status={applied.status} />
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600">
+            You already applied · <StatusBadge status={applied.status} />
+          </p>
+          {applied.status === "offered" && applied._id !== "new" && (
+            <div className="flex gap-2">
+              <button
+                className="btn-accent"
+                onClick={async () => {
+                  await api(`/v1/applications/${applied._id}/decision`, {
+                    method: "PUT",
+                    body: JSON.stringify({ status: "accepted" }),
+                  });
+                  setApplied({ ...applied, status: "accepted" });
+                  setMsg("Offer accepted.");
+                }}
+              >
+                Accept offer
+              </button>
+              <button
+                className="btn-ghost"
+                onClick={async () => {
+                  await api(`/v1/applications/${applied._id}/decision`, {
+                    method: "PUT",
+                    body: JSON.stringify({ status: "declined" }),
+                  });
+                  setApplied({ ...applied, status: "declined" });
+                  setMsg("Offer declined.");
+                }}
+              >
+                Decline
+              </button>
+            </div>
+          )}
+        </div>
       )}
       {user?.role === "recruiter" && (
         <div className="space-y-4">

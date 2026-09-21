@@ -37,6 +37,9 @@ export function Section({
 const STATUS_TONES: Record<string, string> = {
   pending: "bg-zinc-100 text-zinc-700",
   shortlisted: "bg-emerald-50 text-emerald-800",
+  offered: "bg-amber-50 text-amber-900",
+  accepted: "bg-emerald-50 text-emerald-800",
+  declined: "bg-zinc-100 text-zinc-600",
   rejected: "bg-red-50 text-red-700",
   interview: "bg-indigo-50 text-indigo-800",
   scheduled: "bg-indigo-50 text-indigo-800",
