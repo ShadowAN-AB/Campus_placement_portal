@@ -5,7 +5,7 @@ import { AuthUser } from "../common/types";
 import { JwtAuthGuard } from "../identity/guards/jwt-auth.guard";
 import { RolesGuard } from "../identity/guards/roles.guard";
 import { ApplicationsService } from "./applications.service";
-import { ApplyDto, BulkStatusDto, StatusDto } from "./dto/applications.dto";
+import { ApplyDto, BulkStatusDto, DecisionDto, StatusDto } from "./dto/applications.dto";
 
 @Controller("v1/applications")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -40,6 +40,12 @@ export class ApplicationsController {
     @Query() query: Record<string, string>,
   ) {
     return this.apps.forJob(user, jobId, query);
+  }
+
+  @Roles("student")
+  @Put(":appId/decision")
+  decide(@CurrentUser() user: AuthUser, @Param("appId") appId: string, @Body() dto: DecisionDto) {
+    return this.apps.decide(user, appId, dto);
   }
 
   @Roles("recruiter")

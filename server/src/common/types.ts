@@ -1,6 +1,13 @@
 export type Role = "student" | "recruiter" | "admin";
 
-export type ApplicationStatus = "pending" | "shortlisted" | "rejected" | "interview";
+export type ApplicationStatus =
+  | "pending"
+  | "shortlisted"
+  | "rejected"
+  | "interview"
+  | "offered"
+  | "accepted"
+  | "declined";
 
 export type InterviewStatus = "scheduled" | "completed" | "cancelled";
 

@@ -11,8 +11,13 @@ export class ApplyDto {
 }
 
 export class StatusDto {
-  @IsIn(["pending", "shortlisted", "rejected", "interview"])
+  @IsIn(["pending", "shortlisted", "rejected", "interview", "offered"])
   status: ApplicationStatus;
+}
+
+export class DecisionDto {
+  @IsIn(["accepted", "declined"])
+  status: "accepted" | "declined";
 }
 
 export class BulkStatusDto {
@@ -21,6 +26,6 @@ export class BulkStatusDto {
   @IsMongoId({ each: true })
   appIds: string[];
 
-  @IsIn(["pending", "shortlisted", "rejected", "interview"])
+  @IsIn(["pending", "shortlisted", "rejected", "interview", "offered"])
   status: ApplicationStatus;
 }

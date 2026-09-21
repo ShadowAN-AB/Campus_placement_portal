@@ -38,9 +38,9 @@ export class AnalyticsService {
       this.jobs.countDocuments(),
       this.apps.find().populate("jobId").lean(),
     ]);
-    const placed = apps.filter((a) => a.status === "shortlisted" || a.status === "interview").length;
-    const placementRate = apps.length ? Math.round((placed / apps.length) * 100) : 0;
-    const packages = apps
+    const placed = apps.filter((a) => a.status === "accepted");
+    const placementRate = apps.length ? Math.round((placed.length / apps.length) * 100) : 0;
+    const packages = placed
       .map((a) => {
         const job = a.jobId as unknown as { maxSalary?: number; company?: string };
         return job?.maxSalary ?? 0;
@@ -50,12 +50,10 @@ export class AnalyticsService {
       ? Math.round(packages.reduce((s, n) => s + n, 0) / packages.length)
       : 0;
     const companyMap = new Map<string, number>();
-    for (const a of apps) {
+    for (const a of placed) {
       const job = a.jobId as unknown as { company?: string };
       if (!job?.company) continue;
-      if (a.status === "shortlisted" || a.status === "interview") {
-        companyMap.set(job.company, (companyMap.get(job.company) ?? 0) + 1);
-      }
+      companyMap.set(job.company, (companyMap.get(job.company) ?? 0) + 1);
     }
     const topCompanies = [...companyMap.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -80,10 +78,7 @@ export class AnalyticsService {
       avgPackage,
       topCompanies,
       trend,
-      recentPlacements: apps
-        .filter((a) => a.status === "shortlisted" || a.status === "interview")
-        .slice(-8)
-        .reverse(),
+      recentPlacements: [...placed].slice(-8).reverse(),
     };
   }
 }

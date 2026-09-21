@@ -11,7 +11,7 @@ export class Application {
   @Prop({ type: RefId, ref: "Job", required: true, index: true })
   jobId: Types.ObjectId;
 
-  @Prop({ default: "pending", enum: ["pending", "shortlisted", "rejected", "interview"] })
+  @Prop({ default: "pending", enum: ["pending", "shortlisted", "rejected", "interview", "offered", "accepted", "declined"] })
   status: ApplicationStatus;
 
   @Prop({ default: 0 })

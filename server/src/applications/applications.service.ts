@@ -10,7 +10,7 @@ import { StudentProfile, StudentProfileDocument } from "../catalog/schemas/profi
 import { calculateMatchScore } from "../matching/match-algorithm";
 import { Application, ApplicationDocument } from "./schemas/application.schema";
 import { MatchScore, MatchScoreDocument } from "./schemas/match-score.schema";
-import { ApplyDto, BulkStatusDto, StatusDto } from "./dto/applications.dto";
+import { ApplyDto, BulkStatusDto, DecisionDto, StatusDto } from "./dto/applications.dto";
 
 @Injectable()
 export class ApplicationsService {
@@ -184,5 +184,22 @@ export class ApplicationsService {
       });
     }
     return { updated: apps.length, skipped: 0 };
+  }
+
+  async decide(user: AuthUser, appId: string, dto: DecisionDto) {
+    const app = await this.apps.findById(appId);
+    if (!app) throw new NotFoundException();
+    if (String(app.studentId) !== user.userId) throw new ForbiddenException();
+    if (app.status !== "offered") throw new ForbiddenException("Offer is not open");
+    app.status = dto.status;
+    await app.save();
+    const job = await this.jobs.findById(app.jobId);
+    await this.outbox.emit(EventTypes.ApplicationStatus, {
+      applicationId: appId,
+      studentId: user.userId,
+      status: dto.status,
+      jobTitle: job?.title,
+    });
+    return app;
   }
 }
