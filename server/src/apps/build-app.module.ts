@@ -3,7 +3,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { BullModule } from "@nestjs/bullmq";
 import { MongooseModule } from "@nestjs/mongoose";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
-import { QUEUE_EVENTS } from "../common/types";
+import { QUEUE_EVENTS, QUEUE_JOB_OPTIONS } from "../common/types";
 import { HealthController } from "../health/health.controller";
 import { env } from "../infra/config/env";
 import { AuthCoreModule } from "../identity/auth-core.module";
@@ -46,7 +46,7 @@ export class PlacecellAppModule {
       imports: [
         MongooseModule.forRoot(env.mongodbUri),
         BullModule.forRoot({ connection: { url: env.redisUrl, maxRetriesPerRequest: null } }),
-        BullModule.registerQueue({ name: QUEUE_EVENTS }),
+        BullModule.registerQueue({ name: QUEUE_EVENTS, defaultJobOptions: QUEUE_JOB_OPTIONS }),
         ThrottlerModule.forRoot({
           throttlers: NAMED_THROTTLERS,
         }),

@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { BullModule } from "@nestjs/bullmq";
 import { MongooseModule } from "@nestjs/mongoose";
 import { env } from "./infra/config/env";
-import { QUEUE_EVENTS } from "./common/types";
+import { QUEUE_EVENTS, QUEUE_JOB_OPTIONS } from "./common/types";
 import { RedisInfraModule } from "./infra/redis/redis.module";
 import { StorageModule } from "./infra/storage/storage.module";
 import { MailModule } from "./infra/mail/mail.module";
@@ -25,7 +25,7 @@ import { Interview, InterviewSchema } from "./interviews/schemas/interview.schem
   imports: [
     MongooseModule.forRoot(env.mongodbUri),
     BullModule.forRoot({ connection: { url: env.redisUrl, maxRetriesPerRequest: null } }),
-    BullModule.registerQueue({ name: QUEUE_EVENTS }),
+    BullModule.registerQueue({ name: QUEUE_EVENTS, defaultJobOptions: QUEUE_JOB_OPTIONS }),
     MongooseModule.forFeature([
       { name: ResumeUpload.name, schema: ResumeUploadSchema },
       { name: ResumeAnalysis.name, schema: ResumeAnalysisSchema },

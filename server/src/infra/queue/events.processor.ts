@@ -17,6 +17,7 @@ import { ResumeUpload } from "../../matching/schemas/resume-upload.schema";
 import { ResumeAnalysis } from "../../matching/schemas/resume-analysis.schema";
 import { calculateEnhancedMatchScore, calculateMatchScore } from "../../matching/match-algorithm";
 import { extractText, regexFallback } from "../../matching/resume-parser";
+import { parseResumeExtract } from "../../matching/resume-extract";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { AnalyticsService } from "../../analytics/analytics.service";
 import { MailService } from "../mail/mail.service";
@@ -122,12 +123,12 @@ export class EventsProcessor extends WorkerHost {
           prompt: text.slice(0, 12000),
           temperature: 0.1,
         });
-        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+        const parsed = parseResumeExtract(raw);
         extracted = {
-          skills: (parsed.skills ?? []).map((s: string) => String(s).toLowerCase()),
-          education: parsed.education ?? [],
-          projects: parsed.projects ?? [],
-          certifications: parsed.certifications ?? [],
+          skills: parsed.skills,
+          education: parsed.education,
+          projects: parsed.projects,
+          certifications: parsed.certifications,
           yearsOfExperience: Number(parsed.yearsOfExperience ?? extracted.yearsOfExperience),
         };
       } catch {

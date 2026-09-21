@@ -3,7 +3,7 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { InjectModel } from "@nestjs/mongoose";
 import { Queue } from "bullmq";
 import { Model } from "mongoose";
-import { QUEUE_EVENTS } from "../../common/types";
+import { QUEUE_EVENTS, QUEUE_JOB_OPTIONS } from "../../common/types";
 import { OutboxEvent, OutboxEventDocument } from "./outbox.schema";
 
 @Injectable()
@@ -16,7 +16,7 @@ export class OutboxService {
   async emit(type: string, payload: Record<string, unknown>) {
     const doc = await this.model.create({ type, payload, processedAt: null });
     try {
-      await this.queue.add(type, { outboxId: String(doc._id), type, payload }, { removeOnComplete: 200 });
+      await this.queue.add(type, { outboxId: String(doc._id), type, payload }, QUEUE_JOB_OPTIONS);
     } catch {
       // Sweeper will republish if Redis is briefly down.
     }
@@ -37,7 +37,7 @@ export class OutboxService {
       await this.queue.add(
         doc.type,
         { outboxId: String(doc._id), type: doc.type, payload: doc.payload },
-        { jobId: `outbox-${doc._id}`, removeOnComplete: 200 },
+        { jobId: `outbox-${doc._id}`, ...QUEUE_JOB_OPTIONS },
       );
     }
     return stale.length;
