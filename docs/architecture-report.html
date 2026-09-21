@@ -1006,7 +1006,7 @@
   <p>Sign in as student → Jobs, Resume, Interviews. Recruiter → Hiring. Admin → approvals and analytics. Demo password for all three seed users: <code>Password@123</code>.</p>
   <div class="box">
     <p class="kicker">Health</p>
-    <p>Local gateway: <code>GET http://localhost:5050/health</code> lists each feature. Docker: <code>GET http://localhost:8080/health</code>. A feature’s <code>/ready</code> checks Mongo and Redis.</p>
+    <p>Local and Docker use the same Node gateway map: <code>GET /health</code> lists each feature process (true/false). <code>GET /ready</code> is 200 only if identity and catalog answer. In Compose, nginx proxies those two paths to the <code>gateway</code> container — it does not return a fake 200. A feature’s own <code>/ready</code> still checks Mongo and Redis.</p>
   </div>
   <h3>What this system is, and is not</h3>
   <p><strong>Is:</strong> path-routed feature processes, a worker, cache, locks, idempotent apply, hashed passwords, pluggable AI/storage, Docker Compose, and role-based UIs for student, recruiter, and admin.</p>

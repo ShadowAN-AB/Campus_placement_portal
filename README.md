@@ -105,10 +105,11 @@ npm run docker:seed    # demo users/jobs into the Docker DB
 | MinIO console | — | http://localhost:9001 (minio / minio12345) |
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8080/health   # Node gateway map of each feature process
+curl http://localhost:8080/ready    # 200 only if identity + catalog answer
 ```
 
-Nginx (`docs/nginx.conf`) serves the SPA and sends `/v1/resumes` to matching, `/v1/jobs` to catalog, `/v1/auth` to identity, and so on.
+Nginx serves the SPA and `/v1/...` prefixes. `/health` and `/ready` are proxied to the Node gateway so a down API is visible — they are not a static nginx 200.
 
 ## Environment
 

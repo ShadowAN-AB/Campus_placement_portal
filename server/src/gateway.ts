@@ -3,17 +3,25 @@ import { FEATURE_SERVICES, SERVICE_PORTS, resolveService, type FeatureService } 
 
 const GATEWAY_PORT = Number(process.env.GATEWAY_PORT ?? process.env.PORT ?? 5050);
 const UPSTREAM_HOST = process.env.GATEWAY_UPSTREAM_HOST ?? "127.0.0.1";
+const USE_SERVICE_DNS = process.env.GATEWAY_USE_SERVICE_DNS === "1";
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { "content-type": "application/json" });
   res.end(JSON.stringify(body));
 }
 
+function hostOf(service: FeatureService) {
+  const named = process.env[`GATEWAY_${service.toUpperCase()}_HOST`];
+  if (named) return named;
+  return USE_SERVICE_DNS ? service : UPSTREAM_HOST;
+}
+
 function probe(service: FeatureService): Promise<boolean> {
+  const hostname = hostOf(service);
   const port = SERVICE_PORTS[service];
   return new Promise((resolve) => {
     const req = http.request(
-      { hostname: UPSTREAM_HOST, port, path: "/health", method: "GET", timeout: 1500 },
+      { hostname, port, path: "/health", method: "GET", timeout: 1500 },
       (r) => {
         r.resume();
         resolve((r.statusCode ?? 500) < 500);
@@ -29,11 +37,12 @@ function probe(service: FeatureService): Promise<boolean> {
 }
 
 function proxy(req: http.IncomingMessage, res: http.ServerResponse, service: FeatureService) {
+  const hostname = hostOf(service);
   const port = SERVICE_PORTS[service];
-  const headers = { ...req.headers, host: `${UPSTREAM_HOST}:${port}` };
+  const headers = { ...req.headers, host: `${hostname}:${port}` };
   const upstream = http.request(
     {
-      hostname: UPSTREAM_HOST,
+      hostname,
       port,
       path: req.url,
       method: req.method,
@@ -89,5 +98,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(GATEWAY_PORT, () => {
-  console.log(`PlaceCell gateway :${GATEWAY_PORT} → ${UPSTREAM_HOST} ${FEATURE_SERVICES.map((s) => `${s}:${SERVICE_PORTS[s]}`).join(" ")}`);
+  const targets = FEATURE_SERVICES.map((s) => `${s}@${hostOf(s)}:${SERVICE_PORTS[s]}`).join(" ");
+  console.log(`PlaceCell gateway :${GATEWAY_PORT} → ${targets}`);
 });

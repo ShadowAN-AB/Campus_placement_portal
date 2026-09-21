@@ -144,6 +144,31 @@ services:
     expose:
       - "5057"
 
+  gateway:
+    <<: *feature
+    command: node dist/gateway.js
+    environment:
+      <<: *env
+      GATEWAY_PORT: 5050
+      GATEWAY_USE_SERVICE_DNS: "1"
+    expose:
+      - "5050"
+    depends_on:
+      identity:
+        condition: service_started
+      catalog:
+        condition: service_started
+      applications:
+        condition: service_started
+      matching:
+        condition: service_started
+      interviews:
+        condition: service_started
+      notifications:
+        condition: service_started
+      analytics:
+        condition: service_started
+
   worker:
     build:
       context: .
@@ -168,6 +193,7 @@ services:
     ports:
       - "8080:80"
     depends_on:
+      - gateway
       - identity
       - catalog
       - applications
