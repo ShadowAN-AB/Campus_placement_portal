@@ -952,7 +952,7 @@
   <p>Event names are in <code>server/src/common/types.ts</code>: <code>application.applied</code>, <code>application.status</code>, <code>job.approved</code>, <code>job.changed</code>, <code>profile.updated</code>, <code>resume.uploaded</code>, interview events, <code>analytics.rollup</code>.</p>
   <h3>Pluggable sides</h3>
   <ul>
-    <li><strong>LLM:</strong> <code>LLM_PROVIDER=ollama</code> or <code>anthropic</code>.</li>
+    <li><strong>LLM:</strong> <code>LLM_PROVIDER=ollama</code>, <code>anthropic</code>, or <code>regex</code> (Compose demo — scores resumes without Ollama).</li>
     <li><strong>Storage:</strong> <code>STORAGE_BACKEND=disk</code> or <code>s3</code> (MinIO / R2 / S3).</li>
     <li><strong>Mail:</strong> SMTP if set, otherwise printed to the server log.</li>
   </ul>
@@ -1000,7 +1000,7 @@
   <ol>
     <li>Start Docker Desktop.</li>
     <li><code>npm run docker:up</code> then <code>npm run docker:seed</code>.</li>
-    <li>Open <code>http://localhost:8080</code>. Nginx serves the SPA and routes each <code>/v1</code> prefix to one container.</li>
+    <li>Open <code>http://localhost:8080</code>. Nginx serves the SPA and routes each <code>/v1</code> prefix to one container. Resume scoring uses <code>LLM_PROVIDER=regex</code> so Ollama is not required.</li>
     <li>Compass: connect to <code>mongodb://127.0.0.1:27018</code>, database <code>placecell</code>, collection <code>users</code>.</li>
   </ol>
   <p>Sign in as student → Jobs, Resume, Interviews. Recruiter → Hiring. Admin → approvals and analytics. Demo password for all three seed users: <code>Password@123</code>.</p>

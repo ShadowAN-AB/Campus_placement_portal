@@ -1,6 +1,11 @@
 const DEV_JWT = "change-me-to-a-long-random-string";
 const DEV_ADMIN = "change-me-too";
 
+function parseLlmProvider(value: string | undefined) {
+  if (value === "anthropic" || value === "regex") return value;
+  return "ollama" as const;
+}
+
 function read() {
   const nodeEnv = process.env.NODE_ENV ?? "development";
   const isProd = nodeEnv === "production";
@@ -36,7 +41,7 @@ function read() {
       secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "minio12345",
       endpoint: process.env.S3_ENDPOINT,
     },
-    llmProvider: (process.env.LLM_PROVIDER === "anthropic" ? "anthropic" : "ollama") as "ollama" | "anthropic",
+    llmProvider: parseLlmProvider(process.env.LLM_PROVIDER),
     ollamaModel: process.env.OLLAMA_MODEL ?? "qwen2.5-coder",
     ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,

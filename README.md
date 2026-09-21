@@ -116,7 +116,7 @@ Nginx serves the SPA and `/v1/...` prefixes. `/health` and `/ready` are proxied 
 See [server/.env.example](server/.env.example). In `NODE_ENV=production` the process **throws** if `JWT_SECRET`, `ADMIN_SIGNUP_CODE`, or `MONGODB_URI` is missing or still a known default.
 
 - `STORAGE_BACKEND=disk` locally; `s3` against MinIO/R2/S3 in compose/prod
-- `LLM_PROVIDER=ollama` locally; `anthropic` in production
+- `LLM_PROVIDER=ollama` locally; `regex` in Compose so resume scoring works without Ollama; `anthropic` in production
 - SMTP optional — mail logs to stdout when unset
 
 ## API (selected)
