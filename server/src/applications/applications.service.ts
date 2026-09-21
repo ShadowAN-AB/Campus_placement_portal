@@ -1,15 +1,11 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { idMatch, oid } from "../common/oid";
 import { AuthUser, EventTypes } from "../common/types";
 import { OutboxService } from "../infra/outbox/outbox.service";
 import { Job, JobDocument } from "../catalog/schemas/job.schema";
+import { jobEligibility } from "../catalog/eligibility";
 import { StudentProfile, StudentProfileDocument } from "../catalog/schemas/profile.schema";
 import { calculateMatchScore } from "../matching/match-algorithm";
 import { Application, ApplicationDocument } from "./schemas/application.schema";
@@ -37,6 +33,10 @@ export class ApplicationsService {
     const already = await this.apps.findOne({ studentId: idMatch(user.userId), jobId: idMatch(job._id) });
     if (already) return { ...already.toObject(), replayed: true };
     const profile = await this.profiles.findOne({ userId: idMatch(user.userId) }).lean();
+    const eligibility = jobEligibility(job, profile);
+    if (!eligibility.eligible) {
+      throw new ForbiddenException(eligibility.reasons.join(". ") || "Not eligible for this role");
+    }
     const match = calculateMatchScore({
       studentSkills: profile?.skills ?? [],
       requiredSkills: job.requiredSkills,

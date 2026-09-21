@@ -31,6 +31,18 @@ export class Job {
   @Prop({ default: false, index: true })
   approved: boolean;
 
+  @Prop({ default: "", trim: true })
+  season: string;
+
+  @Prop({ type: [String], default: [] })
+  departments: string[];
+
+  @Prop({ default: 0 })
+  minCgpa: number;
+
+  @Prop({ default: 0 })
+  graduationYear: number;
+
   @Prop({ type: RefId, ref: "User", required: true, index: true })
   postedBy: Types.ObjectId;
 }

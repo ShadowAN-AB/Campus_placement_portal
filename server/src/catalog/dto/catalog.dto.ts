@@ -1,4 +1,4 @@
-import { IsArray, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsArray, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 import { Type } from "class-transformer";
 
 export class UpsertProfileDto {
@@ -28,6 +28,25 @@ export class UpsertProfileDto {
   @IsNumber()
   @Min(0)
   yearsOfExperience?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  department?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  cgpa?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(2100)
+  graduationYear?: number;
 }
 
 export class CreateJobDto {
@@ -61,4 +80,28 @@ export class CreateJobDto {
   @IsNumber()
   @Min(0)
   maxSalary?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  season?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  departments?: string[];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  minCgpa?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(2100)
+  graduationYear?: number;
 }

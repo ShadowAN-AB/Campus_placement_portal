@@ -12,6 +12,7 @@ import { Application, ApplicationDocument } from "../applications/schemas/applic
 import { Job, JobDocument } from "./schemas/job.schema";
 import { StudentProfile, StudentProfileDocument } from "./schemas/profile.schema";
 import { CreateJobDto, UpsertProfileDto } from "./dto/catalog.dto";
+import { jobEligibility } from "./eligibility";
 
 const lower = (xs: string[] = []) => xs.map((s) => s.trim().toLowerCase()).filter(Boolean);
 
@@ -35,6 +36,9 @@ export class CatalogService {
         expectedSalary: 0,
         prefJobTitles: [],
         yearsOfExperience: 0,
+        department: "",
+        cgpa: 0,
+        graduationYear: 0,
         education: [],
         projects: [],
         certifications: [],
@@ -45,6 +49,7 @@ export class CatalogService {
   async upsertProfile(userId: string, dto: UpsertProfileDto) {
     const update: Record<string, unknown> = { ...dto };
     if (dto.skills) update.skills = lower(dto.skills);
+    if (dto.department) update.department = dto.department.trim().toLowerCase();
     const doc = await this.profiles.findOneAndUpdate(
       { userId: idMatch(userId) },
       { $set: { ...update, userId: oid(userId) } },
@@ -63,6 +68,12 @@ export class CatalogService {
     if (query.company) filter.company = new RegExp(query.company, "i");
 
     if (user.role === "student") {
+      const profile = await this.profiles.findOne({ userId: idMatch(user.userId) }).lean();
+      const decorate = <T extends Record<string, unknown>>(items: T[]) =>
+        items.map((job) => {
+          const eligibility = jobEligibility(job, profile);
+          return { ...job, eligible: eligibility.eligible, eligibilityReasons: eligibility.reasons };
+        });
       let cached: string[] = [];
       try {
         cached = await this.redis.zrevrange(`jobs:rank:${user.userId}`, 0, 199, "WITHSCORES");
@@ -79,12 +90,17 @@ export class CatalogService {
         const byId = new Map(docs.map((d) => [String(d._id), d]));
         const items = scored
           .map((s) => (byId.has(s.id) ? { ...byId.get(s.id), matchScore: s.score } : null))
-          .filter(Boolean);
+          .filter(Boolean) as Record<string, unknown>[];
         if (items.length) {
           const start = (page - 1) * pageSize;
-          return { items: items.slice(start, start + pageSize), total: items.length, page, pageSize };
+          return { items: decorate(items.slice(start, start + pageSize)), total: items.length, page, pageSize };
         }
       }
+      const [rankedItems, rankedTotal] = await Promise.all([
+        this.jobs.find(filter).sort({ createdAt: -1 }).skip((page - 1) * pageSize).limit(pageSize).lean(),
+        this.jobs.countDocuments(filter),
+      ]);
+      return { items: decorate(rankedItems), total: rankedTotal, page, pageSize };
     }
 
     const [items, total] = await Promise.all([
@@ -121,6 +137,11 @@ export class CatalogService {
     if (user.role === "recruiter" && String(job.postedBy) !== user.userId) {
       throw new ForbiddenException();
     }
+    if (user.role === "student") {
+      const profile = await this.profiles.findOne({ userId: idMatch(user.userId) }).lean();
+      const eligibility = jobEligibility(job, profile);
+      return { ...job, eligible: eligibility.eligible, eligibilityReasons: eligibility.reasons };
+    }
     return job;
   }
 
@@ -128,6 +149,7 @@ export class CatalogService {
     return this.jobs.create({
       ...dto,
       requiredSkills: lower(dto.requiredSkills),
+      departments: lower(dto.departments),
       approved: false,
       status: "active",
       postedBy: oid(user.userId),
@@ -139,6 +161,7 @@ export class CatalogService {
     if (!job) throw new NotFoundException("Job not found");
     if (String(job.postedBy) !== user.userId) throw new ForbiddenException();
     if (dto.requiredSkills) dto.requiredSkills = lower(dto.requiredSkills);
+    if (dto.departments) dto.departments = lower(dto.departments);
     Object.assign(job, dto);
     await job.save();
     await this.outbox.emit(EventTypes.JobChanged, { jobId });

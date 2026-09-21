@@ -42,6 +42,15 @@ export class StudentProfile {
   @Prop({ default: 0 })
   yearsOfExperience: number;
 
+  @Prop({ default: "", trim: true, lowercase: true })
+  department: string;
+
+  @Prop({ default: 0 })
+  cgpa: number;
+
+  @Prop({ default: 0 })
+  graduationYear: number;
+
   @Prop({ type: [Education], default: [] })
   education: Education[];
 
