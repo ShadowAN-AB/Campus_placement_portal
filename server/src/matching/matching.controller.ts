@@ -31,6 +31,7 @@ export class MatchingController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("student")
+  @Throttle({ analyze: { limit: 20, ttl: 86400000 } })
   @Post("resumes")
   @HttpCode(202)
   @UseInterceptors(FileInterceptor("resume", { limits: { fileSize: 10 * 1024 * 1024 } }))

@@ -11,6 +11,7 @@ import { IdentityService } from "./identity.service";
 export class IdentityController {
   constructor(private readonly identity: IdentityService) {}
 
+  @Throttle({ signup: { limit: 20, ttl: 3600000 } })
   @Post("signup")
   signup(@Body() dto: SignupDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     return this.identity.signup(dto, res, {
@@ -50,6 +51,7 @@ export class IdentityController {
     return this.identity.forgotPassword(dto);
   }
 
+  @Throttle({ reset: { limit: 5, ttl: 3600000 } })
   @Post("reset-password")
   reset(@Body() dto: ResetPasswordDto) {
     return this.identity.resetPassword(dto);

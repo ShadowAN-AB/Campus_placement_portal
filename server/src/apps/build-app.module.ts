@@ -20,6 +20,7 @@ import { MailModule } from "../infra/mail/mail.module";
 import { LlmModule } from "../infra/llm/llm.module";
 import { OutboxModule } from "../infra/outbox/outbox.module";
 import { FEATURE_SERVICES, type FeatureService } from "./services";
+import { NAMED_THROTTLERS } from "./throttlers";
 
 const FEATURE_MODULE: Record<FeatureService, Type> = {
   identity: IdentityModule,
@@ -47,7 +48,7 @@ export class PlacecellAppModule {
         BullModule.forRoot({ connection: { url: env.redisUrl, maxRetriesPerRequest: null } }),
         BullModule.registerQueue({ name: QUEUE_EVENTS }),
         ThrottlerModule.forRoot({
-          throttlers: [{ name: "default", ttl: 60000, limit: 120 }],
+          throttlers: NAMED_THROTTLERS,
         }),
         RedisInfraModule,
         StorageModule,
