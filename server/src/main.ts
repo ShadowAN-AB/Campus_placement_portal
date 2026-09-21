@@ -13,8 +13,15 @@ async function bootstrap() {
   const app = await NestFactory.create(PlacecellAppModule.forService(service));
   app.use(helmet());
   app.use(cookieParser());
-  app.use((req: { headers: Record<string, string>; id?: string }, _res: unknown, next: () => void) => {
-    req.id = req.headers["x-request-id"] || randomUUID();
+  app.use((req: { headers: Record<string, string | string[] | undefined>; id?: string; method?: string; originalUrl?: string; url?: string }, res: { setHeader: (k: string, v: string) => void; on: (e: string, cb: () => void) => void; statusCode?: number }, next: () => void) => {
+    const header = req.headers["x-request-id"];
+    const id = (typeof header === "string" && header.trim()) || randomUUID();
+    req.id = id;
+    res.setHeader("x-request-id", id);
+    const started = Date.now();
+    res.on("finish", () => {
+      console.log(`${id} ${req.method} ${req.originalUrl ?? req.url} ${res.statusCode} ${Date.now() - started}ms service=${service}`);
+    });
     next();
   });
   app.enableCors({
