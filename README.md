@@ -127,13 +127,15 @@ See [server/.env.example](server/.env.example) for local npm and [.env.example](
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/v1/auth/signup\|login\|refresh\|logout` | Refresh is httpOnly cookie |
-| GET/PUT | `/v1/profile` | Skills stored lowercase |
-| GET/POST | `/v1/jobs` | Students see approved+active; Redis rank when warm |
+| GET/PUT | `/v1/profile` | Skills lowercase; department, CGPA, grad year |
+| GET/POST | `/v1/jobs` | Students see approved+active; eligibility flags |
 | POST | `/v1/admin/jobs/:id/approve` | Emits `job.approved` |
-| POST | `/v1/applications` | `Idempotency-Key`; 409 on duplicate |
+| POST | `/v1/applications` | `Idempotency-Key`; 409 duplicate; 403 if ineligible |
+| PUT | `/v1/applications/:id/status` | Recruiter: shortlist / interview / offered / reject |
+| PUT | `/v1/applications/:id/decision` | Student: accept or decline an offer |
 | POST | `/v1/resumes` | **202** — worker analyzes |
 | POST | `/v1/interviews` | Redis lock + ±30 min conflict |
-| GET | `/v1/admin/analytics` | Reads snapshot |
+| GET | `/v1/admin/analytics` | Placement rate = accepted offers / applications |
 | GET | `/health` `/ready` | Liveness / Mongo+Redis |
 
 ## Deploy

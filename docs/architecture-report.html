@@ -615,7 +615,7 @@
   <p><strong>Student:</strong> Apply on a card or job detail. The button becomes Applied. The applications table shows role, company, status, match %, date, pagination. KPIs count applications and shortlist/interview.</p>
   <p><strong>Recruiter:</strong> Job pills with applicant counts. Filters (name, status, min match, skill, sort). Per-row Shortlist / Schedule / Reject. Bulk actions. KPIs for roles and applicants.</p>
   <h3>Why it exists</h3>
-  <p>This is the marketplace. Double-apply must be impossible. Recruiters need the same filters the older portal had.</p>
+  <p>This is the marketplace. Double-apply must be impossible. Apply is also blocked unless the student meets the job’s department, CGPA, and graduation-year rules. Recruiters need the same filters the older portal had.</p>
   <h3>How apply works (read slowly)</h3>
 <div class="flowwrap">
 <svg class="flow" viewBox="0 0 680 490" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Apply and hiring desk flowchart">
@@ -904,7 +904,7 @@
 </div>
 
   <p><code>GET /v1/admin/analytics</code> reads a snapshot document keyed <code>latest</code>. If none exists it computes on the fly. The worker can roll up on <code>analytics.rollup</code>. The UI subtitle says these are <strong>snapshot reads, not live scans</strong>. That is intentional: admin dashboards should not recount every application on every page load.</p>
-  <p>“Placement rate” here counts applications that reached shortlisted or interview — a campus proxy, not “offer letter signed”.</p>
+  <p>“Placement rate” is accepted offers divided by applications. Shortlist and interview are pipeline stages, not placements.</p>
   <h3>Where to look</h3>
   <p><code>server/src/analytics/</code> · <code>client/src/pages/AdminDashboard.tsx</code></p>
 </section>
